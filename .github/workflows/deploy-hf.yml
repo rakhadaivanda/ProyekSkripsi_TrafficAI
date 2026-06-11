@@ -1,0 +1,41 @@
+name: Deploy Backend to Hugging Face Spaces
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'backend/**'
+  workflow_dispatch: # Memungkinkan trigger manual
+
+jobs:
+  sync-to-hub:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          lfs: true
+      
+      - name: Push to HF Spaces
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Konfigurasi Git
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          
+          # Clone repository HF Spaces ke temporary folder
+          git clone https://rakhadaivanda:$HF_TOKEN@huggingface.co/spaces/rakhadaivanda/trafficai-backend hf_space
+          
+          # Masuk ke folder hasil clone dan bersihkan semua file (kecuali .git)
+          cd hf_space
+          git rm -rf .
+          git clean -fxd
+          
+          # Copy isi folder backend dari GitHub ke root folder HF Spaces
+          cp -a ../backend/. .
+          
+          # Commit dan Push
+          git add .
+          git commit -m "Auto-deploy backend from GitHub main branch" || echo "No changes to commit"
+          git push
