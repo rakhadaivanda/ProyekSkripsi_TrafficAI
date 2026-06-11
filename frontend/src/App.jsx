@@ -9,7 +9,7 @@ import {
 // ════════════════════════════════════════════════
 // CONFIG & CONSTANTS
 // ════════════════════════════════════════════════
-const API_BASE = "http://127.0.0.1:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000";
 
 const SEV = {
   high:   { label: "Berat",  bg: "#fef2f2", border: "#fecaca", pillBg: "#fee2e2", pillText: "#b91c1c" },

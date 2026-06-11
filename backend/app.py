@@ -6,13 +6,16 @@ from langchain_groq import ChatGroq
 from groq import Groq
 from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
-import torch, json, re, datetime, base64, io
+import torch, json, re, datetime, base64, io, os
+from dotenv import load_dotenv
+
+load_dotenv()  # Membaca file .env otomatis
 
 app = Flask(__name__)
 CORS(app)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
-GROQ_API_KEY = ""
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 DB_FOLDER    = "./chroma_db"
 DEVICE       = "cuda" if torch.cuda.is_available() else "cpu"
 feedback_log = []
@@ -392,4 +395,5 @@ def health():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get("PORT", 7860))
+    app.run(debug=False, host="0.0.0.0", port=port)

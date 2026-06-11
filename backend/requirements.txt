@@ -1,0 +1,28 @@
+flask==3.1.*
+flask-cors==5.*
+gunicorn==23.*
+python-dotenv==1.*
+
+# AI / ML
+torch==2.7.*
+torchvision==0.22.*
+transformers==4.*
+Pillow==11.*
+
+# LangChain RAG pipeline
+langchain-chroma==0.2.*
+langchain-huggingface==0.1.*
+langchain-groq==0.3.*
+langchain-community==0.3.*
+
+# Vector DB
+chromadb==1.*
+
+# Groq API client
+groq==0.25.*
+
+# Data processing (untuk ingest.py)
+pandas==2.*
+
+# Embedding model
+sentence-transformers==4.*
