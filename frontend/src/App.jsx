@@ -309,20 +309,7 @@ function FeedbackButtons({ msgId, query, feedback, onFeedback }) {
   );
 }
 
-// ── Confidence Badge ─────────────────────────────
-function ConfBadge({ score }) {
-  if (score === null || score === undefined || score === 0) return null;
- // clamp ke 0–100 — ChromaDB bisa return nilai negatif (fix RAG -413%)
-  const pct   = Math.max(0, Math.min(100, Math.round(score * 100)));
-  const color = pct >= 70 ? "text-emerald-600 bg-emerald-50"
-              : pct >= 40 ? "text-amber-600 bg-amber-50"
-              :              "text-red-500 bg-red-50";
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${color}`}>
-      RAG {pct}%
-    </span>
-  );
-}
+
 
 // ── ViolationCard (with stagger animation) ───────
 function ViolationCard({ v, index, onPasalClick }) {
@@ -427,14 +414,11 @@ function Bubble({ msg, onPasalClick, feedback, onFeedback }) {
           )}
           {msg.violations?.length > 0 && (
             <div className="px-4 pb-3">
-              <div className="flex items-center justify-between mb-3 py-2 border-t border-gray-100">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle size={13} className="text-amber-500" />
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    {msg.violations.length} Pelanggaran Terdeteksi
-                  </span>
-                </div>
-                <ConfBadge score={msg.avgConfidence} />
+              <div className="flex items-center gap-2 mb-3 py-2 border-t border-gray-100">
+                <AlertTriangle size={13} className="text-amber-500" />
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                  {msg.violations.length} Pelanggaran Terdeteksi
+                </span>
               </div>
               {msg.violations.map((v, i) => (
                 <ViolationCard key={i} v={v} index={i} onPasalClick={onPasalClick} />
@@ -879,7 +863,7 @@ function EvaluasiPage() {
 
   const copyStats = () => {
     if (!stats) return;
-    const text = `TrafficAI — Statistik Evaluasi\n\nTotal Query: ${stats.total_queries}\nQuery Pelanggaran: ${stats.violation_queries}\nRata-rata Pelanggaran/Kasus: ${stats.avg_violations_per_case}\nAvg Confidence RAG: ${(stats.avg_confidence * 100).toFixed(1)}%\nFeedback Positif: ${stats.positive_feedback}\nFeedback Negatif: ${stats.negative_feedback}\nTingkat Kepuasan: ${stats.satisfaction_rate}%`;
+    const text = `TrafficAI — Statistik Evaluasi\n\nTotal Query: ${stats.total_queries}\nQuery Pelanggaran: ${stats.violation_queries}\nRata-rata Pelanggaran/Kasus: ${stats.avg_violations_per_case}\nRetrieval Relevance: ${(stats.avg_confidence * 100).toFixed(1)}%\nFeedback Positif: ${stats.positive_feedback}\nFeedback Negatif: ${stats.negative_feedback}\nTingkat Kepuasan: ${stats.satisfaction_rate}%`;
     navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); });
   };
 
@@ -907,7 +891,7 @@ function EvaluasiPage() {
     { label: "Total Query",           val: stats.total_queries,           unit: "" },
     { label: "Query Pelanggaran",     val: stats.violation_queries,       unit: "" },
     { label: "Rata-rata Pelanggaran", val: stats.avg_violations_per_case, unit: "/kasus" },
-    { label: "Avg Confidence RAG",    val: (stats.avg_confidence * 100).toFixed(1), unit: "%" },
+    { label: "Retrieval Relevance",   val: (stats.avg_confidence * 100).toFixed(1), unit: "%" },
     { label: "Feedback Positif 👍",   val: stats.positive_feedback,       unit: "" },
     { label: "Feedback Negatif 👎",   val: stats.negative_feedback,       unit: "" },
   ];
@@ -975,7 +959,7 @@ function EvaluasiPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs text-gray-700 truncate">{q.query}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Conf: {(q.avg_confidence * 100).toFixed(1)}%</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Relevance: {(q.avg_confidence * 100).toFixed(1)}%</p>
                   </div>
                 </div>
               ))}

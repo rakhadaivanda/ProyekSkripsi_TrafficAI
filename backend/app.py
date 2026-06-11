@@ -23,7 +23,8 @@ query_log    = []
 
 print("🔧 Memuat resources...")
 embeddings   = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
-vector_store = Chroma(persist_directory=DB_FOLDER, embedding_function=embeddings)
+vector_store = Chroma(persist_directory=DB_FOLDER, embedding_function=embeddings,
+                      collection_metadata={"hnsw:space": "cosine"})
 llm          = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
 groq_client  = Groq(api_key=GROQ_API_KEY)
 
@@ -157,17 +158,15 @@ def clamp_score(score):
 
 def distance_to_similarity(distance):
     """
-    Mengubah distance ChromaDB menjadi similarity score 0-1.
-    Semakin kecil distance, semakin besar similarity.
+    Mengubah cosine distance ChromaDB menjadi similarity score 0-1.
+    Cosine distance = 1 - cosine_similarity, range [0, 2].
+    Semakin kecil distance, semakin mirip dokumen.
     """
     try:
-        distance = float(distance)
-
-        # Jika distance negatif, gunakan nilai absolut agar tetap bisa dikonversi
-        distance = abs(distance)
-
-        similarity = 1 / (1 + distance)
-        return round(clamp_score(similarity), 4)
+        d = abs(float(distance))
+        # Konversi cosine distance → cosine similarity
+        similarity = 1.0 - d
+        return round(max(0.0, min(1.0, similarity)), 4)
     except Exception:
         return 0.0
 

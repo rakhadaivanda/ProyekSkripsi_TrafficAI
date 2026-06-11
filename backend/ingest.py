@@ -55,7 +55,8 @@ def create_knowledge_base():
     Chroma.from_documents(
         documents=docs,
         embedding=embeddings,
-        persist_directory=DB_FOLDER
+        persist_directory=DB_FOLDER,
+        collection_metadata={"hnsw:space": "cosine"}   # Cosine similarity (standar semantic search)
     )
 
     print("=" * 45)
