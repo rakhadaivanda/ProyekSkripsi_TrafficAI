@@ -47,8 +47,10 @@ const PASAL_LIST = [
 const EXAMPLES = [
   "Saya naik motor tanpa helm dan tidak bawa SIM",
   "Tadi saya menerobos lampu merah sambil main HP",
-  "Motor saya tidak ada spion dan bonceng 3 orang",
-  "Saya ngebut dan tidak bawa STNK serta SIM",
+  "Bagaimana tips berkendara motor yang aman?",
+  "Apa saja syarat untuk membuat SIM C?",
+  "Kenapa harus selalu memakai helm saat berkendara?",
+  "Apa yang harus dilakukan saat terjadi kecelakaan?",
 ];
 
 // ════════════════════════════════════════════════
@@ -400,8 +402,26 @@ function Bubble({ msg, onPasalClick, feedback, onFeedback }) {
               </p>
             </div>
           )}
-          {/* Plain message (greeting/info) */}
-          {!msg.isError && msg.content && (
+          {/* Info / educational response */}
+          {!msg.isError && msg.content && msg.mode === "info" && (
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full">💡 Info Lalu Lintas</span>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{msg.content}</p>
+            </div>
+          )}
+          {/* Off-topic response */}
+          {!msg.isError && msg.content && msg.mode === "off_topic" && (
+            <div className="px-4 py-3">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-0.5 rounded-full">🚫 Di Luar Topik</span>
+              </div>
+              <p className="text-sm text-gray-700 leading-relaxed">{msg.content}</p>
+            </div>
+          )}
+          {/* Plain message (greeting) */}
+          {!msg.isError && msg.content && msg.mode !== "info" && msg.mode !== "off_topic" && (
             <div className="px-4 py-3">
               <p className="text-sm text-gray-700 leading-relaxed">{msg.content}</p>
             </div>
@@ -518,11 +538,11 @@ function HomePage({ goTo }) {
             <Zap size={14} className="text-yellow-300" /> Powered by RAG + Groq API
           </div>
           <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight">
-            Konsultasi Pelanggaran<br />Lalu Lintas Berbasis AI
+            Asisten Edukasi<br />Lalu Lintas Berbasis AI
           </h1>
           <p className="text-blue-100 text-base mb-10 max-w-xl mx-auto leading-relaxed">
-            Deteksi <strong>beberapa pelanggaran sekaligus</strong> dari satu kalimat.
-            Dapatkan pasal, sanksi, dan estimasi denda secara instan.
+            Deteksi <strong>pelanggaran</strong>, tanyakan <strong>tips keselamatan</strong>, atau pelajari <strong>aturan lalu lintas</strong>.
+            Semua dijawab secara instan oleh AI.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={() => goTo("konsultasi")}
@@ -632,9 +652,11 @@ function KonsultasiPage({ initMsg, setHistory }) {
       if (data.error) throw new Error(data.error);
 
       const hasV   = data.is_violation && data.violations?.length > 0;
+      const mode   = data.mode || (hasV ? "violation" : "greeting");
       const aiMsg  = {
         id:            msgId,
         role:          "assistant",
+        mode:          mode,
         content:       !hasV ? data.message : undefined,
         summary:       hasV  ? data.message : undefined,
         violations:    data.violations ?? [],
@@ -693,9 +715,9 @@ function KonsultasiPage({ initMsg, setHistory }) {
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center pb-8">
             <div className="bg-blue-50 rounded-3xl p-6 mb-5"><Car size={40} className="text-blue-500" /></div>
-            <h3 className="font-bold text-gray-700 text-base mb-2">Deskripsikan Situasi Berkendara</h3>
+            <h3 className="font-bold text-gray-700 text-base mb-2">Tanya Apa Saja Tentang Lalu Lintas</h3>
             <p className="text-sm text-gray-400 max-w-xs mb-7 leading-relaxed">
-              Ceritakan kejadian. AI akan mendeteksi semua pelanggaran beserta pasal, sanksi, dan estimasi denda.
+              Ceritakan kejadian untuk deteksi pelanggaran, atau tanyakan tips & aturan lalu lintas.
             </p>
             <div className="grid grid-cols-1 gap-2.5 w-full max-w-sm">
               {EXAMPLES.map((ex, i) => (
@@ -954,7 +976,7 @@ function EvaluasiPage() {
                 <div key={i} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
                   <div className="shrink-0 mt-0.5">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${q.is_violation ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"}`}>
-                      {q.is_violation ? `${q.violations_count} pelang.` : "Sapaan"}
+                      {q.is_violation ? `${q.violations_count} pelang.` : "Info/Sapaan"}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">

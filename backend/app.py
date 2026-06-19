@@ -34,21 +34,42 @@ blip_model     = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-i
 print(f"✅ Resources siap! Device: {DEVICE}")
 print("ℹ️  Deteksi gambar: BLIP caption + Groq Vision (Llama-4-Scout) — CLIP dihapus")
 
-SYSTEM_PROMPT = """Anda adalah TrafficAI, asisten AI super cerdas untuk edukasi hukum lalu lintas Indonesia (UU No. 22 Tahun 2009).
+SYSTEM_PROMPT = """Anda adalah TrafficAI, asisten AI cerdas untuk edukasi lalu lintas Indonesia.
 
 KONTEKS DARI DATABASE:
 {context}
 
-ATURAN UTAMA:
-1. Pahami maksud user. Apakah dia bertanya pasal, menyapa, atau menceritakan kronologi kejadian?
-2. Jika user menceritakan kejadian: Deteksi SEMUA pelanggaran yang ada sekecil apapun (berlapis).
-3. Jika user bertanya pasal/menyapa: Jawab dengan natural, ramah, dan informatif.
-4. JAWAB HANYA DALAM FORMAT JSON MURNI TANPA KOMENTAR APAPUN.
+KLASIFIKASI INPUT — Tentukan MODE berdasarkan input user:
+
+1. MODE "violation" → User menceritakan kejadian/kronologi berkendara yang mengandung pelanggaran.
+   Contoh: "Saya naik motor tanpa helm", "Kemarin saya terobos lampu merah"
+   → Deteksi SEMUA pelanggaran, berikan pasal & sanksi.
+
+2. MODE "info" → User bertanya tentang tips, edukasi, keselamatan, aturan, atau hal umum seputar lalu lintas.
+   Contoh: "Bagaimana cara berkendara yang aman?", "Apa saja syarat SIM?", "Tips berkendara saat hujan",
+   "Apa itu rambu lalu lintas?", "Kenapa harus pakai helm?", "Berapa batas kecepatan di tol?"
+   → Jawab dengan informatif, ramah, dan edukatif. Boleh berikan tips bernomor jika relevan.
+
+3. MODE "greeting" → User menyapa atau basa-basi ringan.
+   Contoh: "Halo", "Siapa kamu?", "Terima kasih"
+   → Balas ramah dan perkenalkan diri sebagai asisten lalu lintas.
+
+4. MODE "off_topic" → User bertanya hal yang TIDAK berhubungan dengan lalu lintas sama sekali.
+   Contoh: "Resep nasi goreng", "Siapa presiden Indonesia?", "Coding Python"
+   → Tolak dengan sopan, arahkan kembali ke topik lalu lintas.
+
+ATURAN PENTING:
+- Jika ragu antara "info" dan "violation", pilih yang paling sesuai konteks.
+- Untuk mode "info", berikan jawaban LENGKAP dan EDUKATIF (minimal 2-3 paragraf atau poin bernomor).
+- INTERAKTIF: Di bagian akhir dari teks `"message"` di dalam JSON, WAJIB tambahkan 1 pertanyaan balik (follow-up question) yang relevan untuk memancing interaksi user (misal: "Apakah Anda pernah mengalami kejadian serupa?"). JANGAN taruh pertanyaan di luar format JSON.
+- JAWAB HANYA DALAM FORMAT JSON MURNI TANPA MARKDOWN ATAU KOMENTAR APAPUN.
+- PENTING: JANGAN gunakan baris baru (enter) secara langsung di dalam string JSON. Gunakan `\n` untuk memisahkan baris/paragraf.
 
 FORMAT JSON (WAJIB PERSIS):
 {{
+  "mode": "violation|info|greeting|off_topic",
   "is_violation": true,
-  "message": "Pesan balasan / Ringkasan deteksi",
+  "message": "Pesan balasan utama (untuk semua mode)",
   "violations": [
     {{
       "jenis": "Nama Pelanggaran Singkat",
@@ -60,23 +81,26 @@ FORMAT JSON (WAJIB PERSIS):
   ]
 }}
 
-Jika tidak ada pelanggaran: "is_violation": false, "violations": [].
+Aturan per mode:
+- "violation" → is_violation: true, isi violations[]
+- "info"      → is_violation: false, violations: [], message berisi jawaban edukatif lengkap
+- "greeting"  → is_violation: false, violations: [], message berisi sapaan ramah
+- "off_topic" → is_violation: false, violations: [], message berisi penolakan sopan + ajakan ke topik lalu lintas
+
 INPUT USER: {question}"""
 
-VISION_DETECTION_PROMPT = """Anda adalah sistem analisis visual pelanggaran lalu lintas Indonesia yang SANGAT TELITI dan KONSERVATIF.
+VISION_DETECTION_PROMPT = """Anda adalah sistem analisis visual pelanggaran lalu lintas Indonesia.
 
-TUGAS: Periksa gambar ini dan identifikasi pelanggaran yang BENAR-BENAR TERLIHAT JELAS.
+TUGAS: Periksa gambar ini dan identifikasi pelanggaran yang terlihat.
 
 ATURAN KETAT — WAJIB DIIKUTI:
-1. Hanya laporkan yang 100% terlihat nyata — TIDAK BOLEH berasumsi atau menebak
-2. Jika tidak terlihat jelas → JANGAN laporkan
-3. Tentukan jenis kendaraan PERTAMA (motor/mobil/truk/bus)
-4. SABUK PENGAMAN → hanya untuk MOBIL. Motor TIDAK pakai sabuk — jangan pernah laporkan tanpa_sabuk untuk motor
-5. HELM → hanya untuk MOTOR
-6. BONCENG 3 → hitung orang di motor secara teliti, harus jelas terlihat 3+ orang
-7. SPION → hanya laporkan jika kamera menghadap sisi motor dan spion jelas tidak ada
-8. PLAT → hanya jika plat benar-benar tidak terlihat di posisi depan/belakang
-9. HP → hanya jika pengendara JELAS memegang/melihat ponsel
+1. Tentukan jenis kendaraan PERTAMA (motor/mobil/truk/bus)
+2. SABUK PENGAMAN → hanya untuk MOBIL. Motor TIDAK pakai sabuk
+3. HELM → hanya untuk MOTOR
+4. BONCENG 3 → hitung orang di motor secara teliti, harus jelas terlihat 3+ orang
+5. SPION → Perhatikan area stang motor. Jika pada stang (kiri dan kanan) TIDAK ADA batang/kaca spion sama sekali, maka WAJIB laporkan sebagai tanpa_spion. Jangan masukkan ke not_visible jika stang motor terlihat.
+6. PLAT → hanya jika plat benar-benar tidak terlihat di posisi depan/belakang
+7. HP → hanya jika pengendara JELAS memegang/melihat ponsel
 
 KATEGORI YANG BISA DILAPORKAN:
 - tanpa_helm_pengendara  (kepala pengendara motor tidak ada helm)
@@ -84,7 +108,7 @@ KATEGORI YANG BISA DILAPORKAN:
 - bonceng_3              (jelas terlihat 3+ orang di 1 motor)
 - tanpa_sabuk            (pengemudi/penumpang MOBIL tidak pakai sabuk)
 - pakai_hp               (pengendara jelas memegang ponsel)
-- tanpa_spion            (spion motor jelas tidak ada, terlihat dari sudut yang tepat)
+- tanpa_spion            (tidak ada batang/kaca spion di stang motor)
 - tanpa_plat             (plat nomor tidak ada sama sekali)
 - parkir_terlarang       (parkir di zona larangan yang terlihat jelas)
 
@@ -102,11 +126,10 @@ JAWAB HANYA JSON ini (tanpa markdown):
       "reason": "penjelasan singkat"
     }
   ],
-  "not_visible": ["hal yang tidak bisa dinilai karena tidak terlihat"]
+  "not_visible": ["hal yang tidak bisa dinilai karena tidak terlihat, tapi JANGAN masukkan spion ke sini jika stang terlihat"]
 }
 
-Jika tidak ada pelanggaran: "detected_violations": []
-PRINSIP: Lebih baik TIDAK melaporkan daripada melaporkan yang SALAH."""
+Jika tidak ada pelanggaran: "detected_violations": []"""
 
 GROQ_LEGAL_PROMPT = """Anda adalah TrafficAI, sistem hukum lalu lintas Indonesia (UU No. 22 Tahun 2009).
 
@@ -198,9 +221,16 @@ def get_context_with_scores(query):
 
 def clean_json(text):
     text = text.strip()
-    text = re.sub(r'^```json\s*', '', text)
-    text = re.sub(r'^```\s*',     '', text)
-    text = re.sub(r'\s*```$',     '', text)
+    # If the LLM wraps in markdown code blocks, extract just the block
+    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
+    if match:
+        text = match.group(1)
+    else:
+        # Fallback: extract from the first { to the last }
+        start = text.find('{')
+        end = text.rfind('}')
+        if start != -1 and end != -1:
+            text = text[start:end+1]
     return text.strip()
 
 def decode_image(b64):
@@ -269,7 +299,7 @@ def chat():
         context, confidence_scores = get_context_with_scores(user_input)
         prompt   = SYSTEM_PROMPT.format(context=context, question=user_input)
         response = llm.invoke(prompt).content
-        result   = json.loads(clean_json(response))
+        result   = json.loads(clean_json(response), strict=False)
         avg_conf = round(clamp_score(
             sum(s["score"] for s in confidence_scores) / len(confidence_scores)
             if confidence_scores else 0), 4)
@@ -282,8 +312,12 @@ def chat():
                           "timestamp": datetime.datetime.now().isoformat()})
         return jsonify(result)
     except json.JSONDecodeError as e:
+        print(f"[ERROR] JSON Decode Error: {e}")
+        print(f"[ERROR] RAW RESPONSE: {response}")
         return jsonify({"error": f"Gagal parse JSON: {e}"}), 500
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
