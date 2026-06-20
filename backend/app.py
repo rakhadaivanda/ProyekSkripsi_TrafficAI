@@ -217,10 +217,12 @@ def distance_to_similarity(distance):
     """
     Mengubah distance ChromaDB menjadi similarity score 0-1.
     Sesuai dengan rumus di skripsi: 1 - d
+    (Chroma mengembalikan L2 squared distance, sehingga d_cosine = L2_squared / 2)
     """
     try:
-        d = abs(float(distance))
-        similarity = 1.0 - d
+        # Konversi L2 squared ke Cosine Distance
+        d_cosine = abs(float(distance)) / 2.0
+        similarity = 1.0 - d_cosine
         return round(max(0.0, min(1.0, similarity)), 4)
     except Exception:
         return 0.0
