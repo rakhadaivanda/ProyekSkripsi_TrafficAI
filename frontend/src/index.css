@@ -27,17 +27,17 @@
   --color-surface-container-lowest: #ffffff;
   --color-surface-container-low: #f1f5f9;
   
-  --color-primary: #1e3a8a;
-  --color-primary-fixed: #1e3a8a;
-  --color-primary-fixed-dim: #1e40af;
+  --color-primary: #064e3b;
+  --color-primary-fixed: #064e3b;
+  --color-primary-fixed-dim: #065f46;
   
-  --color-secondary: #2563eb;
-  --color-secondary-fixed: #dbeafe;
-  --color-on-secondary-fixed: #1e3a8a;
-  --color-secondary-fixed-dim: #93c5fd;
+  --color-secondary: #059669;
+  --color-secondary-fixed: #d1fae5;
+  --color-on-secondary-fixed: #064e3b;
+  --color-secondary-fixed-dim: #6ee7b7;
   
-  --color-tertiary-fixed: #e0e7ff;
-  --color-on-tertiary-fixed: #3730a3;
+  --color-tertiary-fixed: #ecfdf5;
+  --color-on-tertiary-fixed: #047857;
   
   --color-on-surface: #0f172a;
   --color-on-surface-variant: #475569;
@@ -66,8 +66,8 @@
   --color-on-secondary-fixed: #fde68a;
   --color-secondary-fixed-dim: #78350f;
   
-  --color-tertiary-fixed: #1e3a8a;
-  --color-on-tertiary-fixed: #bfdbfe;
+  --color-tertiary-fixed: #064e3b;
+  --color-on-tertiary-fixed: #a7f3d0;
   
   --color-on-surface: #f1f5f9;
   --color-on-surface-variant: #94a3b8;
@@ -85,7 +85,7 @@
    CUSTOM COMPONENTS & UTILITIES
    ═══════════════════════════════════════ */
 .text-gradient-hero {
-  background: linear-gradient(to right, #111827, #1e40af);
+  background: linear-gradient(to right, #111827, #065f46);
   -webkit-background-clip: text;
   color: transparent;
 }
@@ -96,14 +96,14 @@
 }
 
 .badge-hero {
-  background-color: #eff6ff;
-  border-color: #dbeafe;
-  color: #2563eb;
+  background-color: #ecfdf5;
+  border-color: #d1fae5;
+  color: #059669;
 }
 .tm-dark .badge-hero {
-  background-color: rgba(30, 58, 138, 0.3);
-  border-color: rgba(30, 64, 175, 0.5);
-  color: #60a5fa;
+  background-color: rgba(6, 78, 59, 0.3);
+  border-color: rgba(6, 95, 70, 0.5);
+  color: #34d399;
 }
 
 .text-info-heading {
@@ -114,10 +114,10 @@
 }
 
 .blur-hero {
-  background-color: rgba(96, 165, 250, 0.2); /* blue-400/20 */
+  background-color: rgba(52, 211, 153, 0.2); /* emerald-400/20 */
 }
 .tm-dark .blur-hero {
-  background-color: rgba(37, 99, 235, 0.2); /* blue-600/20 */
+  background-color: rgba(5, 150, 105, 0.2); /* emerald-600/20 */
 }
 
 .text-desc-hero {
@@ -212,7 +212,7 @@ h1, h2, h3, h4, h5, h6, .font-extrabold, .font-bold {
    SELECTION HIGHLIGHT
    ═══════════════════════════════════════ */
 ::selection {
-  background: rgba(37, 99, 235, 0.2);
+  background: rgba(16, 185, 129, 0.2);
   color: inherit;
 }
 
