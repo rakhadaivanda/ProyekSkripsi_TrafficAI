@@ -1,47 +1,73 @@
 import { useState, useRef, useEffect, useCallback, createContext, useContext } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Send, Home, MessageSquare, BookOpen, History, Info, Menu, X,
   Car, AlertTriangle, ChevronRight, Clock, Shield, Zap, Search,
   RefreshCw, Wifi, WifiOff, Moon, Sun, Download, Share2,
-  ThumbsUp, ThumbsDown, BarChart2, ExternalLink, Copy, Check,Camera, Upload, ImageIcon, Eye
+  ThumbsUp, ThumbsDown, BarChart2, ExternalLink, Copy, Check, Camera, Upload, ImageIcon, Eye,
+  CreditCard, Smartphone, Wrench, Navigation, BellElectric, FileText, Lock, HardHat, Users, Lightbulb
 } from "lucide-react";
 
 // ════════════════════════════════════════════════
 // CONFIG & CONSTANTS
 // ════════════════════════════════════════════════
-const API_BASE = import.meta.env.VITE_API_BASE || "http://127.0.0.1:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "https://rakhadaivanda-trafficai-backend.hf.space";
 
 const SEV = {
-  high:   { label: "Berat",  bg: "#fef2f2", border: "#fecaca", pillBg: "#fee2e2", pillText: "#b91c1c" },
+  high: { label: "Berat", bg: "#fef2f2", border: "#fecaca", pillBg: "#fee2e2", pillText: "#b91c1c" },
   medium: { label: "Sedang", bg: "#fffbeb", border: "#fde68a", pillBg: "#fef3c7", pillText: "#92400e" },
-  low:    { label: "Ringan", bg: "#f0fdf4", border: "#bbf7d0", pillBg: "#dcfce7", pillText: "#166534" },
+  low: { label: "Ringan", bg: "#f0fdf4", border: "#bbf7d0", pillBg: "#dcfce7", pillText: "#166534" },
 };
 
 const PASAL_LIST = [
-  { pasal: "Pasal 280",     jenis: "Tidak Memasang TNKB",             sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000",   icon: "🔢", denda: 500000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang tidak dipasangi Tanda Nomor Kendaraan Bermotor (TNKB) sebagaimana dimaksud dalam Pasal 68 ayat (1) dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000." },
-  { pasal: "Pasal 281",     jenis: "Tidak Memiliki SIM",              sanksi: "Kurungan maks. 4 bulan / Denda maks. Rp1.000.000", icon: "🪪", denda: 1000000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang tidak memiliki Surat Izin Mengemudi (SIM) sebagaimana dimaksud dalam Pasal 77 ayat (1) dipidana dengan pidana kurungan paling lama 4 bulan atau denda paling banyak Rp1.000.000." },
-  { pasal: "Pasal 283",     jenis: "Menggunakan HP Saat Berkendara",  sanksi: "Kurungan maks. 3 bulan / Denda maks. Rp750.000",   icon: "📱", denda: 750000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan secara tidak wajar dan melakukan kegiatan lain atau dipengaruhi oleh suatu keadaan yang mengakibatkan gangguan konsentrasi dalam mengemudi di jalan dipidana dengan pidana kurungan paling lama 3 bulan atau denda paling banyak Rp750.000." },
-  { pasal: "Pasal 285",     jenis: "Kendaraan Tidak Memenuhi Syarat", sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000",   icon: "🔧", denda: 250000,
-    detail: "Setiap orang yang mengemudikan sepeda motor di jalan yang tidak memenuhi persyaratan teknis dan laik jalan yang meliputi kaca spion, klakson, lampu utama, lampu rem, lampu penunjuk arah, alat pemantul cahaya, alat pengukur kecepatan, knalpot, dan kedalaman alat bantu rem dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000." },
-  { pasal: "Pasal 287 (1)", jenis: "Melanggar Rambu / Marka Jalan",  sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000",   icon: "🚧", denda: 500000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang melanggar aturan perintah atau larangan yang dinyatakan dengan rambu lalu lintas sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf a atau marka jalan sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf b dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000." },
-  { pasal: "Pasal 287 (2)", jenis: "Menerobos Lampu Merah",          sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000",   icon: "🚦", denda: 500000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang melanggar aturan perintah atau larangan yang dinyatakan dengan alat pemberi isyarat lalu lintas sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf c dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000." },
-  { pasal: "Pasal 287 (5)", jenis: "Melebihi Batas Kecepatan",       sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000",   icon: "⚡", denda: 500000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang melanggar batas kecepatan paling tinggi atau paling rendah sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf g atau Pasal 115 huruf a dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000." },
-  { pasal: "Pasal 288",     jenis: "Tidak Membawa STNK / Dokumen",   sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000",   icon: "📄", denda: 500000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang tidak dilengkapi dengan Surat Tanda Nomor Kendaraan Bermotor atau Surat Tanda Coba Kendaraan Bermotor yang ditetapkan oleh Kepolisian Negara Republik Indonesia dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000." },
-  { pasal: "Pasal 289",     jenis: "Tidak Menggunakan Sabuk Pengaman",sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000",   icon: "🔒", denda: 250000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor atau penumpang yang duduk di samping pengemudi yang tidak mengenakan sabuk keselamatan sebagaimana dimaksud dalam Pasal 106 ayat (6) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000." },
-  { pasal: "Pasal 291 (1)", jenis: "Tidak Menggunakan Helm SNI",     sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000",   icon: "🪖", denda: 250000,
-    detail: "Setiap orang yang mengemudikan sepeda motor tidak mengenakan helm standar nasional Indonesia sebagaimana dimaksud dalam Pasal 106 ayat (8) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000." },
-  { pasal: "Pasal 292",     jenis: "Melebihi Kapasitas Penumpang",   sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000",   icon: "👥", denda: 250000,
-    detail: "Setiap orang yang mengemudikan sepeda motor yang membiarkan penumpangnya tidak mengenakan helm atau membawa penumpang lebih dari 1 orang sebagaimana dimaksud dalam Pasal 106 ayat (9) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000." },
-  { pasal: "Pasal 293 (1)", jenis: "Tidak Menyalakan Lampu Utama",   sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000",   icon: "💡", denda: 250000,
-    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan tanpa menyalakan lampu utama pada malam hari dan kondisi tertentu sebagaimana dimaksud dalam Pasal 107 ayat (1) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000." },
+  {
+    pasal: "Pasal 280", jenis: "Tidak Memasang TNKB", sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000", icon: CreditCard, denda: 500000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang tidak dipasangi Tanda Nomor Kendaraan Bermotor (TNKB) sebagaimana dimaksud dalam Pasal 68 ayat (1) dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000."
+  },
+  {
+    pasal: "Pasal 281", jenis: "Tidak Memiliki SIM", sanksi: "Kurungan maks. 4 bulan / Denda maks. Rp1.000.000", icon: CreditCard, denda: 1000000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang tidak memiliki Surat Izin Mengemudi (SIM) sebagaimana dimaksud dalam Pasal 77 ayat (1) dipidana dengan pidana kurungan paling lama 4 bulan atau denda paling banyak Rp1.000.000."
+  },
+  {
+    pasal: "Pasal 283", jenis: "Menggunakan HP Saat Berkendara", sanksi: "Kurungan maks. 3 bulan / Denda maks. Rp750.000", icon: Smartphone, denda: 750000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan secara tidak wajar dan melakukan kegiatan lain atau dipengaruhi oleh suatu keadaan yang mengakibatkan gangguan konsentrasi dalam mengemudi di jalan dipidana dengan pidana kurungan paling lama 3 bulan atau denda paling banyak Rp750.000."
+  },
+  {
+    pasal: "Pasal 285", jenis: "Kendaraan Tidak Memenuhi Syarat", sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000", icon: Wrench, denda: 250000,
+    detail: "Setiap orang yang mengemudikan sepeda motor di jalan yang tidak memenuhi persyaratan teknis dan laik jalan yang meliputi kaca spion, klakson, lampu utama, lampu rem, lampu penunjuk arah, alat pemantul cahaya, alat pengukur kecepatan, knalpot, dan kedalaman alat bantu rem dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000."
+  },
+  {
+    pasal: "Pasal 287 (1)", jenis: "Melanggar Rambu / Marka Jalan", sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000", icon: Navigation, denda: 500000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang melanggar aturan perintah atau larangan yang dinyatakan dengan rambu lalu lintas sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf a atau marka jalan sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf b dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000."
+  },
+  {
+    pasal: "Pasal 287 (2)", jenis: "Menerobos Lampu Merah", sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000", icon: BellElectric, denda: 500000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang melanggar aturan perintah atau larangan yang dinyatakan dengan alat pemberi isyarat lalu lintas sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf c dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000."
+  },
+  {
+    pasal: "Pasal 287 (5)", jenis: "Melebihi Batas Kecepatan", sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000", icon: Zap, denda: 500000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang melanggar batas kecepatan paling tinggi atau paling rendah sebagaimana dimaksud dalam Pasal 106 ayat (4) huruf g atau Pasal 115 huruf a dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000."
+  },
+  {
+    pasal: "Pasal 288", jenis: "Tidak Membawa STNK / Dokumen", sanksi: "Kurungan maks. 2 bulan / Denda maks. Rp500.000", icon: FileText, denda: 500000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan yang tidak dilengkapi dengan Surat Tanda Nomor Kendaraan Bermotor atau Surat Tanda Coba Kendaraan Bermotor yang ditetapkan oleh Kepolisian Negara Republik Indonesia dipidana dengan pidana kurungan paling lama 2 bulan atau denda paling banyak Rp500.000."
+  },
+  {
+    pasal: "Pasal 289", jenis: "Tidak Menggunakan Sabuk Pengaman", sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000", icon: Lock, denda: 250000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor atau penumpang yang duduk di samping pengemudi yang tidak mengenakan sabuk keselamatan sebagaimana dimaksud dalam Pasal 106 ayat (6) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000."
+  },
+  {
+    pasal: "Pasal 291 (1)", jenis: "Tidak Menggunakan Helm SNI", sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000", icon: HardHat, denda: 250000,
+    detail: "Setiap orang yang mengemudikan sepeda motor tidak mengenakan helm standar nasional Indonesia sebagaimana dimaksud dalam Pasal 106 ayat (8) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000."
+  },
+  {
+    pasal: "Pasal 292", jenis: "Melebihi Kapasitas Penumpang", sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000", icon: Users, denda: 250000,
+    detail: "Setiap orang yang mengemudikan sepeda motor yang membiarkan penumpangnya tidak mengenakan helm atau membawa penumpang lebih dari 1 orang sebagaimana dimaksud dalam Pasal 106 ayat (9) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000."
+  },
+  {
+    pasal: "Pasal 293 (1)", jenis: "Tidak Menyalakan Lampu Utama", sanksi: "Kurungan maks. 1 bulan / Denda maks. Rp250.000", icon: Lightbulb, denda: 250000,
+    detail: "Setiap orang yang mengemudikan kendaraan bermotor di jalan tanpa menyalakan lampu utama pada malam hari dan kondisi tertentu sebagaimana dimaksud dalam Pasal 107 ayat (1) dipidana dengan pidana kurungan paling lama 1 bulan atau denda paling banyak Rp250.000."
+  },
 ];
 
 const EXAMPLES = [
@@ -56,7 +82,7 @@ const EXAMPLES = [
 // ════════════════════════════════════════════════
 // THEME CONTEXT
 // ════════════════════════════════════════════════
-const ThemeCtx = createContext({ dark: false, toggle: () => {} });
+const ThemeCtx = createContext({ dark: false, toggle: () => { } });
 const useTheme = () => useContext(ThemeCtx);
 
 // ════════════════════════════════════════════════
@@ -167,7 +193,7 @@ function usePersistentHistory() {
   const setHistory = useCallback((updater) => {
     setHistoryRaw(prev => {
       const next = typeof updater === "function" ? updater(prev) : updater;
-      try { localStorage.setItem("trafficai_history", JSON.stringify(next.slice(0, 50))); } catch {}
+      try { localStorage.setItem("trafficai_history", JSON.stringify(next.slice(0, 50))); } catch { }
       return next;
     });
   }, []);
@@ -191,7 +217,7 @@ function useDarkMode() {
 }
 
 // ════════════════════════════════════════════════
-// DARK MODE STYLES
+// DARK MODE + GLOBAL STYLES
 // ════════════════════════════════════════════════
 const DARK_CSS = `
   .tm-dark { background-color:#0f172a !important; color:#e2e8f0 !important; }
@@ -228,11 +254,13 @@ function PasalModal({ pasal, onClose }) {
         onClick={e => e.stopPropagation()}>
         <div className="flex items-start justify-between mb-4">
           <div>
-            <span className="text-2xl mr-2">{pasal.icon}</span>
-            <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
-              {pasal.pasal}
-            </span>
-            <h2 className="font-bold text-gray-800 text-base mt-2">{pasal.jenis}</h2>
+            <div className="flex items-center gap-2 mb-2">
+              {pasal.icon && <pasal.icon size={20} className="text-blue-600 shrink-0" />}
+              <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">
+                {pasal.pasal}
+              </span>
+            </div>
+            <h2 className="font-bold text-gray-800 text-base">{pasal.jenis}</h2>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors">
             <X size={18} />
@@ -280,7 +308,7 @@ function FeedbackButtons({ msgId, query, feedback, onFeedback }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messageId: msgId, feedback: type, query }),
       });
-    } catch {}
+    } catch { }
   };
   return (
     <div className="flex items-center gap-2 mt-2 px-1">
@@ -288,22 +316,20 @@ function FeedbackButtons({ msgId, query, feedback, onFeedback }) {
       <button
         onClick={() => send("up")}
         disabled={!!given}
-        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${
-          given === "up"
-            ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-            : "border-gray-200 text-gray-400 hover:border-emerald-200 hover:text-emerald-600 hover:bg-emerald-50"
-        } disabled:cursor-default`}
+        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${given === "up"
+          ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+          : "border-gray-200 text-gray-400 hover:border-emerald-200 hover:text-emerald-600 hover:bg-emerald-50"
+          } disabled:cursor-default`}
       >
         <ThumbsUp size={11} /> Ya
       </button>
       <button
         onClick={() => send("down")}
         disabled={!!given}
-        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${
-          given === "down"
-            ? "bg-red-50 border-red-200 text-red-700"
-            : "border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-600 hover:bg-red-50"
-        } disabled:cursor-default`}
+        className={`flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-all ${given === "down"
+          ? "bg-red-50 border-red-200 text-red-700"
+          : "border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-600 hover:bg-red-50"
+          } disabled:cursor-default`}
       >
         <ThumbsDown size={11} /> Tidak
       </button>
@@ -320,12 +346,15 @@ function ViolationCard({ v, index, onPasalClick }) {
     v.pasal?.includes(p.pasal.replace(" (1)", "").replace(" (2)", "").replace(" (5)", ""))
   );
   return (
-    <div
-      className="rounded-2xl p-4 mb-3 last:mb-0"
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.4, delay: index * 0.1, type: "spring", stiffness: 100 }}
+      whileHover={{ scale: 1.02, y: -2 }}
+      className="rounded-2xl p-5 mb-4 last:mb-0 shadow-sm hover:shadow-md transition-all cursor-default relative overflow-hidden"
       style={{
         background: s.bg,
-        border: `1px solid ${s.border}`,
-        animation: `slideUp 0.35s ease-out ${index * 0.08}s both`,
+        border: `1px solid ${s.border}`
       }}
     >
       <div className="flex items-center gap-2.5 mb-3">
@@ -354,7 +383,7 @@ function ViolationCard({ v, index, onPasalClick }) {
           </button>
         </div>
         {[
-          { label: "Sanksi",     val: v.sanksi,     cls: "text-gray-800" },
+          { label: "Sanksi", val: v.sanksi, cls: "text-gray-800" },
           { label: "Keterangan", val: v.penjelasan, cls: "text-gray-500 leading-relaxed" },
         ].map((row, i) => (
           <div key={i} className="flex gap-2 text-xs">
@@ -363,7 +392,7 @@ function ViolationCard({ v, index, onPasalClick }) {
           </div>
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -372,58 +401,62 @@ function Bubble({ msg, onPasalClick, feedback, onFeedback }) {
   const isUser = msg.role === "user";
   if (isUser) {
     return (
-      <div className="flex justify-end mb-5 gap-2.5">
-        <div className="max-w-sm sm:max-w-lg">
-          <div className="bg-blue-600 text-white rounded-2xl rounded-tr-md px-4 py-3 text-sm leading-relaxed shadow-sm">
-            {msg.content}
+      <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="flex justify-end mb-5">
+        <div className="max-w-[85%] md:max-w-[75%]">
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-[15px] leading-relaxed shadow-md">
+            {msg.imageBase64 && (
+              <img src={msg.imageBase64} alt="Upload" className="max-w-full h-auto rounded-lg mb-2 border border-blue-500" style={{ maxHeight: 200 }} />
+            )}
+            <div className="font-normal whitespace-pre-wrap break-words">{msg.content}</div>
           </div>
-          <p className="text-xs text-gray-400 mt-1.5 px-1 text-right">{msg.time}</p>
+          <p className="font-normal text-[11px] text-on-surface-variant mt-1.5 px-1 text-right">{msg.time}</p>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="flex justify-start mb-5 gap-2.5">
-      <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-        <Car size={14} className="text-white" />
-      </div>
+    <motion.div initial={{ opacity: 0, y: 10, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} className="flex justify-start mb-5 gap-2.5">
+      <motion.div whileHover={{ rotate: 10 }} className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center shrink-0 mt-0.5 shadow-md border border-blue-400/30">
+        <Car size={18} className="text-white" />
+      </motion.div>
       <div className="max-w-sm sm:max-w-lg lg:max-w-2xl w-full">
-        <div className="bg-white card-surface border border-gray-100 rounded-2xl rounded-tl-md shadow-sm overflow-hidden">
+        <div className="bg-surface-container-lowest glass-card border border-outline-variant rounded-2xl rounded-tl-sm shadow-md overflow-hidden">
           {/* Error */}
           {msg.isError && (
-            <div className="px-4 py-3 bg-red-50">
-              <div className="flex items-center gap-1.5 text-red-500 text-xs font-semibold mb-1.5">
+            <div className="px-4 py-3 bg-error-container">
+              <div className="flex items-center gap-1.5 text-on-error-container text-xs font-bold mb-1.5">
                 <WifiOff size={12} /> Koneksi gagal
               </div>
-              <p className="text-sm text-red-700 leading-relaxed">{msg.content}</p>
-              <p className="text-xs text-red-400 mt-1.5">
-                Pastikan backend berjalan: <code className="bg-red-100 px-1 rounded">python app.py</code>
-              </p>
+              <p className="font-normal text-sm text-on-error-container leading-relaxed">{msg.content}</p>
             </div>
           )}
           {/* Info / educational response */}
           {!msg.isError && msg.content && msg.mode === "info" && (
             <div className="px-4 py-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-0.5 rounded-full">💡 Info Lalu Lintas</span>
+                <span className="bg-tertiary-fixed text-on-tertiary-fixed text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <Lightbulb size={12} /> Info Lalu Lintas
+                </span>
               </div>
-              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{msg.content}</p>
+              <p className="font-normal text-sm text-on-surface leading-relaxed whitespace-pre-line">{msg.content}</p>
             </div>
           )}
           {/* Off-topic response */}
           {!msg.isError && msg.content && msg.mode === "off_topic" && (
             <div className="px-4 py-3">
               <div className="flex items-center gap-2 mb-2">
-                <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-0.5 rounded-full">🚫 Di Luar Topik</span>
+                <span className="bg-error-container text-on-error-container text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <Shield size={12} /> Di Luar Topik
+                </span>
               </div>
-              <p className="text-sm text-gray-700 leading-relaxed">{msg.content}</p>
+              <p className="font-normal text-sm text-on-surface leading-relaxed">{msg.content}</p>
             </div>
           )}
           {/* Plain message (greeting) */}
           {!msg.isError && msg.content && msg.mode !== "info" && msg.mode !== "off_topic" && (
             <div className="px-4 py-3">
-              <p className="text-sm text-gray-700 leading-relaxed">{msg.content}</p>
+              <p className="font-normal text-sm text-on-surface leading-relaxed">{msg.content}</p>
             </div>
           )}
           {/* Summary + violations */}
@@ -481,7 +514,7 @@ function Bubble({ msg, onPasalClick, feedback, onFeedback }) {
         )}
         <p className="text-xs text-gray-400 mt-1 px-1">{msg.time}</p>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -490,7 +523,7 @@ function TypingDots() {
   return (
     <div className="flex justify-start mb-5 gap-2.5">
       <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0 shadow-sm">
-        <Car size={14} className="text-white" />
+        <Car size={18} className="text-white" />
       </div>
       <div className="bg-white card-surface border border-gray-100 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
         <div className="flex gap-1.5 items-center">
@@ -508,11 +541,10 @@ function TypingDots() {
 // ── Status Badge ─────────────────────────────────
 function StatusBadge({ online }) {
   return (
-    <div className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-lg ${
-      online === null ? "text-gray-400"
-        : online ? "text-emerald-600 bg-emerald-50"
+    <div className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-lg ${online === null ? "text-gray-400"
+      : online ? "text-emerald-600 bg-emerald-50"
         : "text-red-500 bg-red-50"
-    }`}>
+      }`}>
       {online === null ? <span className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse" />
         : online ? <Wifi size={11} /> : <WifiOff size={11} />}
       {online === null ? "Memeriksa..." : online ? "Online" : "Offline"}
@@ -527,85 +559,378 @@ function StatusBadge({ online }) {
 // ── Home ─────────────────────────────────────────
 function HomePage({ goTo }) {
   return (
-    <div className="overflow-y-auto h-full page-bg">
-      <div className="relative bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-40 h-40 rounded-full bg-white" />
-          <div className="absolute bottom-0 right-20 w-64 h-64 rounded-full bg-indigo-300" />
-        </div>
-        <div className="relative max-w-4xl mx-auto px-6 py-16 text-center">
-          <div className="inline-flex items-center gap-2 bg-white bg-opacity-15 rounded-full px-4 py-2 text-sm font-medium mb-6">
-            <Zap size={14} className="text-yellow-300" /> Powered by RAG + Groq API
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-4 leading-tight">
-            Asisten Edukasi<br />Lalu Lintas Berbasis AI
-          </h1>
-          <p className="text-blue-100 text-base mb-10 max-w-xl mx-auto leading-relaxed">
-            Deteksi <strong>pelanggaran</strong>, tanyakan <strong>tips keselamatan</strong>, atau pelajari <strong>aturan lalu lintas</strong>.
-            Semua dijawab secara instan oleh AI.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => goTo("konsultasi")}
-              className="bg-white text-blue-700 font-bold px-7 py-3 rounded-xl hover:bg-blue-50 transition-all flex items-center justify-center gap-2 shadow-lg">
-              <MessageSquare size={18} /> Mulai Konsultasi
-            </button>
-            <button onClick={() => goTo("informasi")}
-              className="border-2 border-white border-opacity-40 text-white font-semibold px-7 py-3 rounded-xl hover:bg-white hover:bg-opacity-10 transition-all flex items-center justify-center gap-2">
-              <BookOpen size={18} /> Informasi Pasal
-            </button>
-          </div>
-        </div>
-      </div>
-      <div className="bg-white card-surface border-b border-gray-100">
-        <div className="max-w-4xl mx-auto px-6 py-5 flex justify-around">
-          {[["20+","Jenis Pelanggaran"],["UU 22/2009","Dasar Hukum"],["RAG + LLM","Teknologi AI"],["Real-time","Deteksi Instan"]].map(([n,l]) => (
-            <div key={l} className="text-center">
-              <div className="text-lg font-bold text-blue-600">{n}</div>
-              <div className="text-xs text-gray-500">{l}</div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="overflow-y-auto h-full w-full"
+    >
+      <div className="max-w-container-max mx-auto px-md py-8 space-y-8">
+
+        {/* ══════════════════════════════════════
+            HERO
+        ══════════════════════════════════════ */}
+        <motion.section
+          initial={{ y: 28, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ duration: 0.55, type: "spring", stiffness: 90 }}
+          className="relative overflow-hidden rounded-3xl shadow-2xl"
+          style={{
+            background: "linear-gradient(135deg, #060e24 0%, #0e2156 40%, #1a3a8f 70%, #1e45b8 100%)",
+          }}
+        >
+          {/* ── decorative layer ── */}
+          {/* dot-grid overlay */}
+          <div className="pointer-events-none absolute inset-0" style={{
+            backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
+            backgroundSize: "28px 28px"
+          }} />
+          {/* glowing orbs */}
+          <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(96,165,250,0.18) 0%, transparent 70%)" }} />
+          <div className="pointer-events-none absolute -bottom-20 -left-20 w-72 h-72 rounded-full"
+            style={{ background: "radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)" }} />
+          <div className="pointer-events-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-40 rounded-full"
+            style={{ background: "radial-gradient(ellipse, rgba(59,130,246,0.08) 0%, transparent 70%)" }} />
+
+          <div className="relative z-10 px-8 md:px-12 py-12 md:py-14">
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 items-center">
+
+              {/* ── LEFT: copy ── */}
+              <div className="w-full overflow-hidden">
+                {/* badge */}
+                <motion.div
+                  initial={{ opacity: 0, x: -12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="inline-flex items-center gap-2 mb-6 rounded-full border px-4 py-1.5"
+                  style={{ background: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.16)" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                  <span className="text-[11px] font-bold text-white/80 uppercase tracking-[0.15em]">
+                    AI-Powered · UU No.22 Tahun 2009
+                  </span>
+                </motion.div>
+
+                {/* headline */}
+                <motion.h1
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15, duration: 0.5 }}
+                  className="font-extrabold leading-[1.1] tracking-tight text-white mb-5"
+                  style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)" }}
+                >
+                  Asisten Edukasi<br />
+                  <span style={{
+                    background: "linear-gradient(90deg, #60a5fa 0%, #a78bfa 50%, #38bdf8 100%)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent"
+                  }}>
+                    Lalu Lintas
+                  </span>{" "}
+                  <span className="text-white">Indonesia</span>
+                </motion.h1>
+
+                {/* sub */}
+                <motion.p
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.22 }}
+                  className="text-blue-200/80 leading-relaxed mb-8 text-base md:text-lg"
+                >
+                  Deteksi pelanggaran, konsultasi aturan, dan analisis foto berkendara — didukung AI dengan referensi hukum akurat secara instan.
+                </motion.p>
+
+                {/* CTAs */}
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex flex-wrap gap-3 mb-10"
+                >
+                  <button
+                    onClick={() => goTo("konsultasi")}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all active:scale-95"
+                    style={{ background: "#3b82f6", color: "#fff", boxShadow: "0 0 0 1px rgba(255,255,255,0.1) inset, 0 8px 24px rgba(59,130,246,0.4)" }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.15) inset, 0 12px 32px rgba(59,130,246,0.55)"}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow = "0 0 0 1px rgba(255,255,255,0.1) inset, 0 8px 24px rgba(59,130,246,0.4)"}
+                  >
+                    <MessageSquare size={15} /> Mulai Konsultasi
+                  </button>
+                  <button
+                    onClick={() => goTo("informasi")}
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all active:scale-95"
+                    style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.18)", color: "rgba(255,255,255,0.9)" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.14)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
+                  >
+                    <BookOpen size={15} /> Lihat Pasal
+                  </button>
+                </motion.div>
+
+                {/* ── tech stack strip ── */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.4 }}
+                  className="flex flex-wrap items-center gap-3"
+                >
+                  {[
+                    { label: "Llama 3.3-70B", color: "#f59e0b" },
+                    { label: "Groq API", color: "#10b981" },
+                    { label: "ChromaDB RAG", color: "#8b5cf6" },
+                    { label: "BLIP Vision", color: "#3b82f6" },
+                    { label: "React + Tailwind v4", color: "#06b6d4" },
+                  ].map(({ label, color }) => (
+                    <span key={label}
+                      className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-full"
+                      style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "rgba(255,255,255,0.75)" }}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: color }} />
+                      {label}
+                    </span>
+                  ))}
+                </motion.div>
+              </div>
+
+              {/* ── RIGHT: demo card ── */}
+              <motion.div
+                initial={{ opacity: 0, x: 24, scale: 0.96 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                transition={{ delay: 0.25, duration: 0.55, type: "spring" }}
+                className="hidden lg:block shrink-0 w-72"
+              >
+                {/* Mock violation card */}
+                <div className="rounded-2xl overflow-hidden shadow-2xl"
+                  style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.14)", backdropFilter: "blur(16px)" }}>
+                  {/* header */}
+                  <div className="px-4 py-3 flex items-center gap-2"
+                    style={{ background: "rgba(255,255,255,0.05)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+                    <div className="w-2 h-2 rounded-full bg-red-400" />
+                    <div className="w-2 h-2 rounded-full bg-yellow-400" />
+                    <div className="w-2 h-2 rounded-full bg-green-400" />
+                    <span className="ml-2 text-[11px] text-white/40 font-mono">TrafficAI · Live Demo</span>
+                  </div>
+                  {/* user message */}
+                  <div className="px-4 pt-4 pb-2">
+                    <div className="flex justify-end mb-3">
+                      <div className="rounded-xl rounded-tr-sm px-3 py-2 text-xs font-medium text-white max-w-[85%]"
+                        style={{ background: "rgba(59,130,246,0.7)" }}>
+                        Saya naik motor tanpa helm dan tidak bawa SIM
+                      </div>
+                    </div>
+                    {/* ai response */}
+                    <div className="rounded-xl rounded-tl-sm px-3 py-2.5"
+                      style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                      <p className="text-[11px] font-semibold text-white/70 mb-2">2 Pelanggaran Terdeteksi</p>
+                      {/* violation pills */}
+                      {[
+                        { pasal: "Pasal 291 (1)", jenis: "Tanpa Helm SNI", denda: "Rp250.000", sev: "#f59e0b" },
+                        { pasal: "Pasal 281", jenis: "Tidak Miliki SIM", denda: "Rp1.000.000", sev: "#ef4444" },
+                      ].map((v, i) => (
+                        <div key={i} className="mb-1.5 last:mb-0 rounded-lg px-2.5 py-2"
+                          style={{ background: "rgba(255,255,255,0.05)", border: `1px solid ${v.sev}30` }}>
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded"
+                              style={{ background: `${v.sev}25`, color: v.sev }}>{v.pasal}</span>
+                            <span className="text-[10px] font-bold" style={{ color: v.sev }}>{v.denda}</span>
+                          </div>
+                          <p className="text-[10px] text-white/60 mt-1">{v.jenis}</p>
+                        </div>
+                      ))}
+                      {/* total */}
+                      <div className="mt-2 rounded-lg px-2.5 py-1.5 flex justify-between items-center"
+                        style={{ background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.25)" }}>
+                        <span className="text-[10px] text-amber-300/80 font-semibold">Total Estimasi</span>
+                        <span className="text-[11px] font-extrabold text-amber-300">Rp1.250.000</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="px-4 pb-3 pt-1">
+                    <div className="flex items-center gap-2 rounded-lg px-3 py-2"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                      <span className="text-[11px] text-white/30 flex-1">Ketik pertanyaan hukum...</span>
+                      <Send size={11} className="text-blue-400 shrink-0" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
             </div>
-          ))}
-        </div>
-      </div>
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <h2 className="text-xl font-bold text-gray-800 text-center mb-8">Cara Kerja</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 mb-12">
-          {[
-            { icon: <MessageSquare size={22} className="text-blue-600" />, title: "1. Deskripsikan", desc: "Ketik situasi berkendara Anda secara natural" },
-            { icon: <Zap size={22} className="text-blue-600" />, title: "2. AI Mendeteksi", desc: "RAG identifikasi semua pelanggaran sekaligus" },
-            { icon: <Shield size={22} className="text-blue-600" />, title: "3. Hasil Lengkap", desc: "Pasal, sanksi, denda & opsi export PDF" },
-          ].map((s, i) => (
-            <div key={i} className="bg-white card-surface rounded-2xl border border-gray-100 p-6 text-center shadow-sm hover:shadow-md transition-shadow">
-              <div className="bg-blue-50 rounded-xl w-12 h-12 flex items-center justify-center mx-auto mb-4">{s.icon}</div>
-              <h3 className="font-bold text-gray-800 mb-2 text-sm">{s.title}</h3>
-              <p className="text-xs text-gray-500 leading-relaxed">{s.desc}</p>
+
+            {/* ── bottom stats bar ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45 }}
+              className="mt-8 pt-6 flex flex-wrap gap-x-8 gap-y-3"
+              style={{ borderTop: "1px solid rgba(255,255,255,0.1)" }}
+            >
+              {[
+                { val: "12+ Pasal", icon: BookOpen },
+                { val: "3-Step Vision AI", icon: Camera },
+                { val: "RAG Pipeline", icon: Search },
+                { val: "100% Edukatif", icon: Shield },
+              ].map(({ val, icon: Icon }, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <Icon size={13} className="text-blue-300/70 shrink-0" />
+                  <span className="text-[13px] font-semibold text-white/60">{val}</span>
+                </div>
+              ))}
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* ══════════════════════════════════════
+            SERVICES + SIDEBAR
+        ══════════════════════════════════════ */}
+        <div className="grid grid-cols-12 gap-6">
+          {/* Services */}
+          <section className="col-span-12 md:col-span-8 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-4 rounded-full bg-blue-600" />
+              <span className="text-xs font-black uppercase tracking-widest text-blue-600">Layanan Utama</span>
             </div>
-          ))}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                {
+                  id: "konsultasi", icon: MessageSquare,
+                  gradient: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+                  glow: "rgba(37,99,235,0.20)",
+                  title: "Deteksi Pelanggaran",
+                  desc: "Ceritakan kronologi berkendara dan dapatkan breakdown pasal & denda secara instan.",
+                  badge: "AI Chat"
+                },
+                {
+                  id: "informasi", icon: BookOpen,
+                  gradient: "linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)",
+                  glow: "rgba(79,70,229,0.20)",
+                  title: "Database Pasal",
+                  desc: "12+ pasal UU No.22 Tahun 2009 dengan penjelasan mudah dipahami & pencarian cepat.",
+                  badge: "12+ Pasal"
+                },
+              ].map(({ id, icon: Icon, gradient, glow, title, desc, badge }) => (
+                <motion.div
+                  key={id}
+                  whileHover={{ y: -5 }}
+                  onClick={() => goTo(id)}
+                  className="glass-card rounded-2xl p-6 cursor-pointer group relative overflow-hidden"
+                  style={{ transition: "box-shadow 0.3s" }}
+                  onMouseEnter={e => e.currentTarget.style.boxShadow = `0 16px 40px -8px ${glow}`}
+                  onMouseLeave={e => e.currentTarget.style.boxShadow = ""}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform"
+                      style={{ background: gradient }}>
+                      <Icon size={20} className="text-white" />
+                    </div>
+                    <span className="text-[10px] font-bold px-2 py-1 rounded-full"
+                      style={{ background: "rgba(37,99,235,0.08)", color: "#2563eb", border: "1px solid rgba(37,99,235,0.15)" }}>
+                      {badge}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-base text-info-heading mb-2">{title}</h4>
+                  <p className="text-sm text-on-surface-variant leading-relaxed">{desc}</p>
+                  <div className="flex items-center gap-1 mt-4 text-xs font-bold text-blue-600 opacity-0 group-hover:opacity-100 translate-x-0 group-hover:translate-x-1 transition-all">
+                    Buka sekarang <ChevronRight size={12} />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+
+            <motion.div
+              whileHover={{ y: -3 }}
+              onClick={() => goTo("riwayat")}
+              className="glass-card rounded-2xl p-5 cursor-pointer group flex items-center gap-4 relative overflow-hidden"
+              onMouseEnter={e => e.currentTarget.style.boxShadow = "0 12px 32px -8px rgba(109,40,217,0.18)"}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = ""}
+              style={{ transition: "box-shadow 0.3s" }}
+            >
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg group-hover:scale-110 transition-transform"
+                style={{ background: "linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)" }}>
+                <History size={22} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-purple-500 mb-0.5">Auto-saved</p>
+                <h4 className="font-bold text-base text-info-heading">Riwayat Konsultasi</h4>
+                <p className="text-sm text-on-surface-variant truncate">Ulas kembali konsultasi sebelumnya yang tersimpan di browser.</p>
+              </div>
+              <ChevronRight size={18} className="text-outline group-hover:text-purple-500 shrink-0 transition-colors" />
+            </motion.div>
+          </section>
+
+          {/* Sidebar */}
+          <aside className="col-span-12 md:col-span-4">
+            <motion.div
+              initial={{ opacity: 0, x: 16 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="glass-card rounded-2xl p-5 h-full"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-1 h-4 rounded-full bg-blue-600" />
+                <p className="text-xs font-black uppercase tracking-widest text-blue-600">Coba Tanya</p>
+              </div>
+              <h3 className="font-bold text-lg text-info-heading mb-4">Contoh Pertanyaan</h3>
+              <div className="flex flex-col gap-2">
+                {EXAMPLES.slice(0, 4).map((ex, i) => (
+                  <motion.button
+                    key={i}
+                    whileHover={{ x: 4 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => goTo("konsultasi", ex)}
+                    className="text-left border border-outline-variant hover:border-blue-300 p-3 rounded-xl text-sm text-info-heading transition-all flex items-start gap-2.5 group"
+                    style={{ background: "var(--color-surface-container-low)" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(37,99,235,0.04)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "var(--color-surface-container-low)"; }}
+                  >
+                    <span className="w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold mt-0.5 transition-all"
+                      style={{ background: "rgba(37,99,235,0.1)", color: "#2563eb" }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "#2563eb"; e.currentTarget.style.color = "#fff"; }}
+                    >
+                      {i + 1}
+                    </span>
+                    <span className="leading-relaxed">{ex}</span>
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+          </aside>
         </div>
-        <h2 className="text-xl font-bold text-gray-800 text-center mb-6">Coba Langsung</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {EXAMPLES.map((ex, i) => (
-            <button key={i} onClick={() => goTo("konsultasi", ex)}
-              className="flex items-center gap-3 bg-white card-surface border border-gray-200 rounded-xl p-4 text-left hover:border-blue-400 hover:bg-blue-50 transition-all group shadow-sm">
-              <ChevronRight size={15} className="text-blue-400 group-hover:text-blue-600 shrink-0" />
-              <span className="text-sm text-gray-600 group-hover:text-blue-700">{ex}</span>
-            </button>
-          ))}
-        </div>
+
+        <Footer />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 // ── Konsultasi ───────────────────────────────────
 function KonsultasiPage({ initMsg, setHistory }) {
-  const [messages, setMessages]   = useState([]);
-  const [input, setInput]         = useState(initMsg || "");
-  const [loading, setLoading]     = useState(false);
-  const [online, setOnline]       = useState(null);
-  const [feedback, setFeedback]   = useState({});
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState(initMsg || "");
+  const [loading, setLoading] = useState(false);
+  const [online, setOnline] = useState(null);
+  const [feedback, setFeedback] = useState({});
   const [modalPasal, setModalPasal] = useState(null);
-  const bottomRef   = useRef(null);
+
+  const [imageBase64, setImageBase64] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const bottomRef = useRef(null);
   const textareaRef = useRef(null);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 8000000) {
+      alert("Gambar terlalu besar (maks ~8MB).");
+      return;
+    }
+    setImagePreview(URL.createObjectURL(file));
+    const reader = new FileReader();
+    reader.onload = (event) => setImageBase64(event.target.result);
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     fetch(`${API_BASE}/api/health`)
@@ -628,41 +953,61 @@ function KonsultasiPage({ initMsg, setHistory }) {
 
   const send = useCallback(async (overrideText) => {
     const text = (overrideText || input).trim();
-    if (!text || loading) return;
+    if ((!text && !imageBase64) || loading) return;
     setInput("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
 
-    const msgId     = `msg_${Date.now()}`;
-    const userMsg   = { id: `u_${Date.now()}`, role: "user", content: text, time: getTime() };
-    const withUser  = [...messages, userMsg];
+    const imgB64 = imageBase64;
+    setImagePreview(null);
+    setImageBase64(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    const msgId = `msg_${Date.now()}`;
+    const userMsg = { id: `u_${Date.now()}`, role: "user", content: text, time: getTime(), imageBase64: imgB64 };
+    const withUser = [...messages, userMsg];
     setMessages(withUser);
     setLoading(true);
 
     try {
-      const res  = await fetch(`${API_BASE}/api/chat`, {
+      // Route: gambar -> /api/detect-image, teks saja -> /api/chat
+      const isImageOnly = !!imgB64;
+      const endpoint = isImageOnly ? `${API_BASE}/api/detect-image` : `${API_BASE}/api/chat`;
+      const payload = isImageOnly
+        ? { image_base64: imgB64.split(",")[1] ?? imgB64, filename: "chat_image.jpg" }
+        : { message: text };
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
-        signal: AbortSignal.timeout(30000),
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(120000),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch (e) {
+        throw new Error(`HTTP ${res.status}: Gagal membaca respons dari server.`);
+      }
+
       setOnline(true);
+      if (!res.ok) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
       if (data.error) throw new Error(data.error);
 
-      const hasV   = data.is_violation && data.violations?.length > 0;
-      const mode   = data.mode || (hasV ? "violation" : "greeting");
-      const aiMsg  = {
-        id:            msgId,
-        role:          "assistant",
-        mode:          mode,
-        content:       !hasV ? data.message : undefined,
-        summary:       hasV  ? data.message : undefined,
-        violations:    data.violations ?? [],
+      const hasV = data.is_violation && data.violations?.length > 0;
+      const mode = data.mode || (hasV ? "violation" : "greeting");
+      const aiMsg = {
+        id: msgId,
+        role: "assistant",
+        mode: mode,
+        content: !hasV ? data.message : undefined,
+        summary: hasV ? data.message : undefined,
+        violations: data.violations ?? [],
         avgConfidence: data.avg_confidence,
-        userInput:     text,
-        time:          getTime(),
+        userInput: text,
+        time: getTime(),
       };
 
       const finalChat = [...withUser, aiMsg];
@@ -670,19 +1015,22 @@ function KonsultasiPage({ initMsg, setHistory }) {
 
       if (hasV) {
         setHistory(prev => [{
-          id:       Date.now(),
-          preview:  text.length > 60 ? text.slice(0, 60) + "…" : text,
-          dateStr:  getDate() + ", " + getTime(),
-          count:    data.violations.length,
+          id: Date.now(),
+          preview: text.length > 60 ? text.slice(0, 60) + "…" : text,
+          dateStr: getDate() + ", " + getTime(),
+          count: data.violations.length,
           messages: finalChat,
         }, ...prev]);
       }
     } catch (err) {
       setOnline(false);
       const isTO = err.name === "TimeoutError";
+      let errMsg = isTO ? "Waktu tunggu habis (60 detik). Coba lagi sebentar." : err.message;
+      if (errMsg === "Failed to fetch") errMsg = "Tidak dapat terhubung ke backend. Pastikan server menyala.";
+
       setMessages([...withUser, {
         id: msgId, role: "assistant",
-        content: isTO ? "Waktu tunggu habis (30 detik). Coba lagi sebentar." : "Tidak dapat terhubung ke backend.",
+        content: errMsg,
         isError: true, time: getTime(),
       }]);
     } finally {
@@ -694,64 +1042,81 @@ function KonsultasiPage({ initMsg, setHistory }) {
     <div className="flex flex-col h-full">
       {modalPasal && <PasalModal pasal={modalPasal} onClose={() => setModalPasal(null)} />}
       {/* Header */}
-      <div className="chat-header bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shrink-0">
+      <div className="chat-header bg-surface/90 backdrop-blur-md border-b border-outline-variant px-5 py-3.5 flex items-center justify-between shrink-0 z-10 sticky top-0 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-sm">
-            <Car size={16} className="text-white" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center shadow-md">
+            <Car size={15} className="text-white" />
           </div>
           <div>
-            <p className="font-bold text-gray-800 text-sm">Konsultan Lalu Lintas AI</p>
+            <p className="font-bold text-gray-800 text-sm leading-tight">Konsultan Lalu Lintas AI</p>
             <StatusBadge online={online} />
           </div>
         </div>
         {messages.length > 0 && (
-          <button onClick={() => setMessages([])} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-red-500 transition-colors px-2 py-1 rounded-lg hover:bg-red-50">
-            <RefreshCw size={12} /> Reset
+          <button onClick={() => setMessages([])} className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-red-500 transition-colors px-3 py-1.5 rounded-lg hover:bg-red-50 border border-transparent hover:border-red-100">
+            <RefreshCw size={11} /> Reset Chat
           </button>
         )}
       </div>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 pt-5 pb-2 page-bg">
         {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center pb-8">
-            <div className="bg-blue-50 rounded-3xl p-6 mb-5"><Car size={40} className="text-blue-500" /></div>
-            <h3 className="font-bold text-gray-700 text-base mb-2">Tanya Apa Saja Tentang Lalu Lintas</h3>
-            <p className="text-sm text-gray-400 max-w-xs mb-7 leading-relaxed">
-              Ceritakan kejadian untuk deteksi pelanggaran, atau tanyakan tips & aturan lalu lintas.
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center justify-center h-full text-center pb-8 w-full">
+            <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-3xl p-6 mb-6 shadow-xl border border-blue-400/30"><Car size={48} className="text-white" /></motion.div>
+            <h3 className="font-extrabold text-info-heading text-2xl mb-3 tracking-tight">Konsultasi Hukum Berlalu Lintas</h3>
+            <p className="font-medium text-gray-500 text-[15px] max-w-2xl w-full px-4 mb-8 leading-relaxed">
+              Ceritakan kronologi untuk deteksi pelanggaran, atau tanyakan referensi aturan lalu lintas secara langsung.
             </p>
-            <div className="grid grid-cols-1 gap-2.5 w-full max-w-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-3xl px-4">
               {EXAMPLES.map((ex, i) => (
                 <button key={i} onClick={() => send(ex)}
-                  className="text-left text-sm bg-white card-surface border border-gray-200 rounded-xl px-4 py-2.5 hover:border-blue-300 hover:bg-blue-50 transition-all text-gray-600 hover:text-blue-700 flex items-center gap-2.5 group">
-                  <ChevronRight size={13} className="text-gray-300 group-hover:text-blue-400 shrink-0" />{ex}
+                  className="text-left font-normal text-sm bg-surface-container-lowest card-surface border border-outline-variant rounded-xl px-4 py-3 hover:border-primary-fixed hover:bg-surface-container-low transition-all text-info-heading flex items-center gap-2.5 group shadow-sm">
+                  <Search size={14} className="text-secondary group-hover:text-blue-500 shrink-0" />{ex}
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         ) : (
-          <>
+          <div className="max-w-4xl mx-auto w-full">
             {messages.map((m, i) => (
               <Bubble key={i} msg={m} onPasalClick={setModalPasal} feedback={feedback} onFeedback={handleFeedback} />
             ))}
             {loading && <TypingDots />}
             <div ref={bottomRef} />
-          </>
+          </div>
         )}
       </div>
       {/* Input */}
-      <div className="chat-input-bar bg-white border-t border-gray-100 p-3 shrink-0">
-        <div className="flex items-end gap-2 bg-gray-100 input-bg rounded-2xl px-4 py-2.5">
+      <div className="chat-input-bar bg-surface/80 backdrop-blur-md border-t border-outline-variant p-4 md:p-6 shrink-0 relative z-10">
+        <AnimatePresence>
+          {imagePreview && (
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="absolute bottom-full left-0 mb-2 ml-4 z-10">
+              <div className="relative inline-block">
+                <img src={imagePreview} alt="Preview" className="h-20 w-auto rounded-lg border border-outline-variant shadow-sm object-cover" />
+                <button onClick={() => { setImagePreview(null); setImageBase64(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                  className="absolute -top-2 -right-2 bg-error text-white rounded-full p-1 shadow-md hover:bg-red-600 z-10">
+                  <X size={12} />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className="flex items-end gap-2 bg-surface-container-low input-bg rounded-2xl px-4 py-3 border border-outline-variant focus-within:border-primary-fixed transition-colors shadow-sm max-w-4xl mx-auto">
+          <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleFileChange} />
+          <button onClick={() => fileInputRef.current?.click()} className="text-on-surface-variant hover:text-primary-fixed transition-colors shrink-0 pb-1">
+            <Camera size={20} />
+          </button>
           <textarea ref={textareaRef} rows={1} value={input} onChange={handleInputChange}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
-            placeholder="Contoh: Saya naik motor tanpa helm, tidak bawa SIM, dan bonceng 3 orang..."
-            className="flex-1 bg-transparent text-sm text-gray-800 resize-none outline-none placeholder-gray-400 py-0.5"
+            placeholder="Ketik pertanyaan hukum atau unggah bukti gambar..."
+            className="flex-1 bg-transparent text-sm text-on-surface font-normal resize-none outline-none placeholder-outline py-0.5"
             style={{ minHeight: "24px", maxHeight: "96px" }} />
-          <button onClick={() => send()} disabled={!input.trim() || loading}
-            className="bg-blue-600 text-white rounded-xl p-2 hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 shadow-sm active:scale-95">
+          <button onClick={() => send()} disabled={(!input.trim() && !imageBase64) || loading}
+            className="bg-primary-fixed text-white rounded-xl p-2.5 hover:bg-blue-900 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0 shadow-sm active:scale-95">
             <Send size={16} />
           </button>
         </div>
-        <p className="text-xs text-gray-400 text-center mt-2">Enter untuk kirim · Shift+Enter untuk baris baru</p>
+        <p className="text-[11px] font-normal text-outline text-center mt-2 max-w-4xl mx-auto">Enter untuk kirim · Shift+Enter untuk baris baru · TrafficAI dapat melakukan kesalahan. Harap verifikasi info penting.</p>
       </div>
     </div>
   );
@@ -766,47 +1131,60 @@ function InformasiPage() {
     p.jenis.toLowerCase().includes(q.toLowerCase())
   );
   return (
-    <div className="overflow-y-auto h-full page-bg">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-y-auto h-full w-full page-bg">
       {modal && <PasalModal pasal={modal} onClose={() => setModal(null)} />}
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-container-max mx-auto px-md py-lg min-h-screen flex flex-col">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-1">Informasi Pasal Hukum</h1>
-          <p className="text-gray-500 text-sm">UU No. 22 Tahun 2009 — klik kartu untuk detail bunyi pasal</p>
+          <h1 className="font-extrabold tracking-tighter text-4xl md:text-5xl text-info-heading mb-2 drop-shadow-sm">Database Aturan Lalu Lintas</h1>
+          <p className="font-medium text-on-surface-variant text-base">UU No. 22 Tahun 2009 — klik kartu untuk detail bunyi pasal</p>
         </div>
-        <div className="relative mb-6">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="relative mb-8">
+          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" />
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Cari pasal atau jenis pelanggaran..."
-            className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white card-surface" />
+            className="w-full pl-12 pr-4 py-3.5 border border-outline-variant rounded-xl font-medium text-[15px] outline-none focus:border-primary-fixed focus:ring-2 focus:ring-primary-fixed/20 transition-all bg-surface-container-lowest glass-card text-on-surface shadow-sm" />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filtered.map((p, i) => (
-            <div key={i} onClick={() => setModal(p)}
-              className="bg-white card-surface border border-gray-200 rounded-2xl p-5 shadow-sm hover:shadow-md hover:border-blue-200 transition-all cursor-pointer group">
-              <div className="flex items-start gap-3 mb-3">
-                <div className="text-2xl">{p.icon}</div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-block bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-0.5 rounded-full mb-1.5">{p.pasal}</span>
-                    <ExternalLink size={13} className="text-gray-300 group-hover:text-blue-400 transition-colors" />
+        <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8 flex-grow">
+          <AnimatePresence>
+            {filtered.map((p, i) => (
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.2 }}
+                key={p.pasal}
+                onClick={() => setModal(p)}
+                whileHover={{ y: -5, scale: 1.02 }} className="glass-card bg-surface-container-lowest rounded-2xl p-6 hover:shadow-lg hover:border-primary-fixed-dim transition-all cursor-pointer group flex flex-col"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-blue-400/30">
+                    <p.icon size={24} className="text-white" />
                   </div>
-                  <h3 className="font-bold text-gray-800 text-sm leading-tight">{p.jenis}</h3>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="inline-block bg-secondary-fixed text-on-secondary-fixed font-semibold text-[11px] px-2.5 py-0.5 rounded-full">{p.pasal}</span>
+                      <ExternalLink size={14} className="text-outline group-hover:text-primary-fixed transition-colors" />
+                    </div>
+                    <h3 className="font-extrabold text-base text-info-heading leading-tight">{p.jenis}</h3>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-start gap-2 bg-amber-50 rounded-xl p-3">
-                <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-xs text-amber-800 font-medium">{p.sanksi}</p>
-              </div>
-            </div>
-          ))}
+                <div className="mt-auto flex items-start gap-2 bg-error-container rounded-xl p-3 border border-red-100 dark:border-red-900/30">
+                  <AlertTriangle size={14} className="text-on-error-container shrink-0 mt-0.5" />
+                  <p className="font-normal text-xs text-on-error-container font-medium leading-relaxed">{p.sanksi}</p>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
           {filtered.length === 0 && (
-            <div className="col-span-2 text-center py-16 text-gray-400">
-              <Search size={32} className="mx-auto mb-3 opacity-30" />
-              <p className="text-sm">Tidak ditemukan untuk "{q}"</p>
-            </div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-full text-center py-20 text-outline">
+              <Search size={40} className="mx-auto mb-4 opacity-30" />
+              <p className="font-normal text-base">Tidak ditemukan pelanggaran untuk "{q}"</p>
+            </motion.div>
           )}
-        </div>
+        </motion.div>
+        <Footer />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -817,63 +1195,77 @@ function RiwayatPage({ history, goToChat, onClear }) {
 
   if (history.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-center px-6 page-bg">
-        <div className="bg-gray-100 rounded-3xl p-6 mb-4"><History size={36} className="text-gray-300" /></div>
-        <h3 className="font-bold text-gray-500 mb-2">Belum Ada Riwayat</h3>
-        <p className="text-sm text-gray-400 max-w-xs">Riwayat tersimpan otomatis ke browser setelah Anda melakukan konsultasi.</p>
-      </div>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full flex flex-col items-center justify-center text-center px-6 page-bg w-full">
+        <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }} className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[2rem] p-8 mb-6 shadow-md border border-blue-200/50">
+          <History size={56} className="text-blue-500" />
+        </motion.div>
+        <h3 className="font-extrabold text-2xl text-gray-800 mb-3 tracking-tight">Belum Ada Riwayat</h3>
+        <p className="font-medium text-gray-500 text-[15px] max-w-md w-full leading-relaxed">
+          Riwayat tersimpan otomatis ke browser setelah Anda melakukan konsultasi.
+        </p>
+      </motion.div>
     );
   }
 
   return (
-    <div className="overflow-y-auto h-full page-bg">
-      <div className="max-w-2xl mx-auto px-6 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Riwayat Konsultasi</h1>
-          <button onClick={onClear} className="text-xs text-red-400 hover:text-red-600 transition-colors flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="overflow-y-auto h-full w-full page-bg">
+      <div className="max-w-3xl mx-auto px-md py-lg min-h-screen flex flex-col">
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="font-extrabold tracking-tighter text-4xl md:text-5xl text-info-heading drop-shadow-sm">Riwayat Konsultasi</h1>
+          <button onClick={onClear} className="font-normal text-xs text-on-error-container bg-error-container hover:bg-red-200 transition-colors flex items-center gap-1 px-3 py-1.5 rounded-lg shadow-sm">
             <X size={12} /> Hapus semua
           </button>
         </div>
-        <div className="relative mb-5">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="relative mb-6">
+          <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-outline" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cari riwayat..."
-            className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-xl text-sm outline-none focus:border-blue-300 bg-white card-surface" />
+            className="w-full pl-12 pr-4 py-3.5 border border-outline-variant rounded-xl font-medium text-[15px] outline-none focus:border-primary-fixed focus:ring-2 focus:ring-primary-fixed/20 bg-surface-container-lowest glass-card shadow-sm transition-all" />
         </div>
-        <div className="space-y-3">
-          {filtered.map(h => (
-            <button key={h.id} onClick={() => goToChat(h)}
-              className="w-full bg-white card-surface border border-gray-200 rounded-2xl p-4 text-left hover:border-blue-300 hover:bg-blue-50 transition-all shadow-sm group">
-              <div className="flex items-center justify-between">
-                <div className="flex-1 pr-4 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700 truncate mb-1.5">{h.preview}</p>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs text-gray-400 flex items-center gap-1"><Clock size={11} /> {h.dateStr}</span>
-                    <span className="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-semibold">{h.count} pelanggaran</span>
+        <motion.div layout className="space-y-4 mb-8 flex-grow">
+          <AnimatePresence>
+            {filtered.map(h => (
+              <motion.button
+                layout
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                key={h.id}
+                onClick={() => goToChat(h)}
+                whileHover={{ scale: 1.01, x: 5 }} className="w-full bg-surface-container-lowest glass-card border border-outline-variant rounded-2xl p-5 text-left hover:border-primary-fixed hover:bg-surface-container-low transition-all shadow-md group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 pr-4 min-w-0">
+                    <p className="font-bold text-sm font-semibold text-on-surface group-hover:text-primary-fixed truncate mb-2">{h.preview}</p>
+                    <div className="flex items-center gap-3">
+                      <span className="font-normal text-xs text-on-surface-variant flex items-center gap-1"><Clock size={12} /> {h.dateStr}</span>
+                      <span className="bg-error-container text-on-error-container text-[11px] px-2 py-0.5 rounded-full font-bold">{h.count} pelanggaran</span>
+                    </div>
                   </div>
+                  <ChevronRight size={18} className="text-outline group-hover:text-primary-fixed shrink-0" />
                 </div>
-                <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-400 shrink-0" />
-              </div>
-            </button>
-          ))}
+              </motion.button>
+            ))}
+          </AnimatePresence>
           {filtered.length === 0 && search && (
-            <p className="text-sm text-center text-gray-400 py-8">Tidak ditemukan untuk "{search}"</p>
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="font-normal text-sm text-center text-outline py-8">Tidak ditemukan untuk "{search}"</motion.p>
           )}
-        </div>
+        </motion.div>
+        <Footer />
       </div>
-    </div>
+    </motion.div>
   );
 }
 
 // ── Evaluasi (Admin / Bab IV) ─────────────────────
 function EvaluasiPage() {
-  const [stats, setStats]   = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [copied, setCopied]   = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${API_BASE}/api/stats`);
+      const res = await fetch(`${API_BASE}/api/stats`);
       const data = await res.json();
       setStats(data);
     } catch {
@@ -910,20 +1302,20 @@ function EvaluasiPage() {
   );
 
   const metrics = [
-    { label: "Total Query",           val: stats.total_queries,           unit: "" },
-    { label: "Query Pelanggaran",     val: stats.violation_queries,       unit: "" },
+    { label: "Total Query", val: stats.total_queries, unit: "" },
+    { label: "Query Pelanggaran", val: stats.violation_queries, unit: "" },
     { label: "Rata-rata Pelanggaran", val: stats.avg_violations_per_case, unit: "/kasus" },
-    { label: "Retrieval Relevance",   val: (stats.avg_confidence * 100).toFixed(1), unit: "%" },
-    { label: "Feedback Positif 👍",   val: stats.positive_feedback,       unit: "" },
-    { label: "Feedback Negatif 👎",   val: stats.negative_feedback,       unit: "" },
+    { label: "Retrieval Relevance", val: (stats.avg_confidence * 100).toFixed(1), unit: "%" },
+    { label: "Feedback Positif 👍", val: stats.positive_feedback, unit: "" },
+    { label: "Feedback Negatif 👎", val: stats.negative_feedback, unit: "" },
   ];
 
   return (
-    <div className="overflow-y-auto h-full page-bg">
+    <div className="overflow-y-auto h-full w-full page-bg">
       <div className="max-w-3xl mx-auto px-6 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <h1 className="text-3xl font-extrabold text-gray-800 flex items-center gap-3 tracking-tight">
               <BarChart2 size={22} className="text-blue-600" /> Evaluasi Sistem
             </h1>
             <p className="text-sm text-gray-400 mt-1">Data kuantitatif untuk Bab IV skripsi</p>
@@ -944,7 +1336,7 @@ function EvaluasiPage() {
         {/* Metrics grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
           {metrics.map((m, i) => (
-            <div key={i} className="bg-white card-surface rounded-2xl border border-gray-100 p-4 shadow-sm">
+            <div key={i} className="bg-surface-container-lowest glass-card rounded-2xl border border-outline-variant p-5 shadow-md hover:shadow-lg transition-shadow">
               <p className="text-xs text-gray-500 mb-1">{m.label}</p>
               <p className="text-2xl font-extrabold text-blue-600">{m.val}<span className="text-base font-semibold text-gray-400">{m.unit}</span></p>
             </div>
@@ -994,581 +1386,69 @@ function EvaluasiPage() {
 }
 
 // ── Tentang ──────────────────────────────────────
-function TentangPage() {
+function Footer() {
   return (
-    <div className="overflow-y-auto h-full page-bg">
-      <div className="max-w-3xl mx-auto px-6 py-8">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-3xl p-7 text-white mb-6">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="bg-white bg-opacity-20 rounded-xl p-2.5"><Car size={20} className="text-white" /></div>
-            <div>
-              <h1 className="text-lg font-bold">TrafficAI</h1>
-              <p className="text-blue-200 text-xs">Sistem Konsultasi & Edukasi Pelanggaran Lalu Lintas</p>
-            </div>
-          </div>
-          <p className="text-blue-100 text-sm leading-relaxed">
-            Sistem edukasi hukum berbasis AI yang membantu masyarakat memahami pelanggaran lalu lintas dan sanksinya berdasarkan UU No. 22 Tahun 2009.
-          </p>
-        </div>
-        <div className="bg-white card-surface border border-gray-100 rounded-2xl p-6 shadow-sm mb-5">
-          <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Info size={17} className="text-blue-500" /> Teknologi</h2>
-          <div className="space-y-3">
-            {[
-              ["🤖","Groq API + Llama 3.3-70B","LLM inference berkecepatan tinggi"],
-              ["🔍","RAG (Retrieval-Augmented Generation)","Vector database ChromaDB + cosine similarity"],
-              ["📚","UU No. 22 Tahun 2009","Sumber data hukum terverifikasi"],
-              ["🐍","Python + Flask + React","Backend REST API + frontend modern"],
-            ].map(([icon,name,desc]) => (
-              <div key={name} className="flex gap-3 items-start p-3 bg-gray-50 tech-item rounded-xl">
-                <span className="text-xl">{icon}</span>
-                <div><p className="text-sm font-semibold text-gray-800">{name}</p><p className="text-xs text-gray-500">{desc}</p></div>
+    <footer className="bg-surface-container-lowest border-t border-outline-variant mt-10">
+      <div className="max-w-container-max mx-auto px-md py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <div className="bg-gradient-to-br from-primary-fixed to-blue-700 rounded-lg p-1.5 shadow-sm">
+                <Car size={16} className="text-white" />
               </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
-          <div className="flex gap-3">
-            <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-bold text-amber-800 text-sm mb-1.5">Disclaimer</p>
-              <p className="text-xs text-amber-700 leading-relaxed">
-                Hasil analisis sistem ini bersifat <strong>edukatif</strong> berdasarkan UU No. 22 Tahun 2009.
-                Informasi yang diberikan <strong>tidak menggantikan keputusan resmi pihak berwenang</strong> seperti kepolisian atau lembaga peradilan.
-              </p>
+              <span className="font-bold text-info-heading ">TrafficAI</span>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-function DeteksiGambarPage() {
-  const [imageFile, setImageFile]       = useState(null);     // File object
-  const [imagePreview, setImagePreview] = useState(null);     // URL preview
-  const [imageBase64, setImageBase64]   = useState(null);     // Base64 string
-  const [loading, setLoading]           = useState(false);
-  const [result, setResult]             = useState(null);     // Hasil deteksi
-  const [error, setError]               = useState(null);
-  const [dragOver, setDragOver]         = useState(false);
-  const [modalPasal, setModalPasal]     = useState(null);
- 
-  const fileInputRef  = useRef(null);
-  const MAX_SIZE_MB   = 4;
-  const MAX_SIZE_BYTE = MAX_SIZE_MB * 1024 * 1024;
- 
-  // ── Konversi File ke Base64 ──
-  const fileToBase64 = (file) =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload  = () => {
-        // Hapus prefix "data:image/xxx;base64," — kirim string base64 saja
-        const base64 = reader.result.split(",")[1];
-        resolve(base64);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
- 
-  // ── Handle pilih file ──
-  const handleFile = async (file) => {
-    if (!file) return;
- 
-    // Validasi tipe
-    if (!file.type.startsWith("image/")) {
-      setError("File harus berupa gambar (JPG, PNG, WEBP).");
-      return;
-    }
-    // Validasi ukuran
-    if (file.size > MAX_SIZE_BYTE) {
-      setError(`Ukuran file terlalu besar. Maks ${MAX_SIZE_MB}MB. Silakan kompres gambar Anda.`);
-      return;
-    }
- 
-    setError(null);
-    setResult(null);
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
- 
-    const b64 = await fileToBase64(file);
-    setImageBase64(b64);
-  };
- 
-  // ── Input file change ──
-  const onFileChange = (e) => handleFile(e.target.files[0]);
- 
-  // ── Drag & drop ──
-  const onDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    handleFile(e.dataTransfer.files[0]);
-  };
- 
-  // ── Kirim ke API ──
-  const detectImage = async () => {
-    if (!imageBase64 || loading) return;
-    setLoading(true);
-    setError(null);
-    setResult(null);
- 
-    try {
-      const res = await fetch(`${API_BASE}/api/detect-image`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          image_base64: imageBase64,
-          filename:     imageFile?.name || "image.jpg",
-        }),
-        signal: AbortSignal.timeout(120000), // 120 detik — pipeline BLIP+CLIP lokal butuh waktu
-      });
- 
-      if (res.status === 429) {
-        setError("Rate limit Groq (step analisis hukum) tercapai. Tunggu 1 menit lalu coba lagi.");
-        return;
-      }
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || `HTTP ${res.status}`);
-      }
- 
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setResult(data);
- 
-    } catch (err) {
-      if (err.name === "TimeoutError") {
-        setError("Waktu analisis habis (120 detik). Coba lagi atau gunakan gambar yang lebih kecil.");
-      } else {
-        setError(err.message || "Gagal menganalisis gambar.");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
- 
-  // ── Reset ──
-  const reset = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    setImageBase64(null);
-    setResult(null);
-    setError(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
- 
-  // ── Helper konversi denda maks dari string sanksi ──
-  const parseMaxDenda = (sanksi = "") => {
-    const m = sanksi.match(/Rp[\d.]+/);
-    if (!m) return 0;
-    return parseInt(m[0].replace("Rp", "").replace(/\./g, ""), 10) || 0;
-  };
-  const formatRupiah = (n) => "Rp" + n.toLocaleString("id-ID");
- 
-  // ── Confidence badge per pelanggaran ──
-  const ConfidenceBadge = ({ level }) => {
-    const cfg = {
-      high:   { label: "Terdeteksi jelas",  cls: "bg-emerald-100 text-emerald-700" },
-      medium: { label: "Kemungkinan besar", cls: "bg-amber-100 text-amber-700"    },
-      low:    { label: "Kurang jelas",       cls: "bg-gray-100 text-gray-500"      },
-    };
-    const c = cfg[level] ?? cfg.medium;
-    return (
-      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${c.cls}`}>
-        {c.label}
-      </span>
-    );
-  };
- 
-  return (
-    <div className="overflow-y-auto h-full page-bg">
-      {/* Pasal Modal (reuse dari App.jsx) */}
-      {modalPasal && <PasalModal pasal={modalPasal} onClose={() => setModalPasal(null)} />}
- 
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
- 
-        {/* ── Header ── */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-blue-100 rounded-xl p-2">
-              {/* Icon camera — pakai emoji sebagai fallback jika belum import */}
-              <span style={{ fontSize: 20 }}>📷</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Deteksi Gambar</h1>
-              <p className="text-sm text-gray-500">AI Vision analisis pelanggaran dari foto</p>
-            </div>
-          </div>
- 
-          {/* Info chip */}
-          <div className="flex flex-wrap gap-2 mt-4">
-            {[
-              { icon: "✅", text: "Gratis — 100% Lokal" },
-              { icon: "🤖", text: "BLIP + CLIP Vision" },
-              { icon: "⚡", text: "Groq Legal Reasoning" },
-              { icon: "📦", text: "Maks 4MB per gambar" },
-            ].map((c, i) => (
-              <span key={i} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-white card-surface border border-gray-200 rounded-full text-gray-600">
-                <span style={{ fontSize: 12 }}>{c.icon}</span> {c.text}
-              </span>
-            ))}
-          </div>
-        </div>
- 
-        {/* ── Upload Area ── */}
-        {!imagePreview ? (
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={onDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`
-              relative flex flex-col items-center justify-center
-              border-2 border-dashed rounded-2xl p-12 cursor-pointer
-              transition-all text-center
-              ${dragOver
-                ? "border-blue-400 bg-blue-50"
-                : "border-gray-300 bg-white card-surface hover:border-blue-300 hover:bg-blue-50"}
-            `}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={onFileChange}
-              className="hidden"
-            />
-            <div className="bg-blue-50 rounded-2xl p-5 mb-4">
-              <span style={{ fontSize: 40 }}>📷</span>
-            </div>
-            <h3 className="font-bold text-gray-700 text-base mb-2">
-              Upload foto atau drag & drop
-            </h3>
-            <p className="text-sm text-gray-400 mb-4 max-w-xs leading-relaxed">
-              Foto berkendara, situasi jalan, atau kondisi kendaraan untuk dianalisis AI
+            <p className="font-normal text-sm text-on-surface-variant mb-4">
+              Sistem edukasi hukum berbasis AI yang membantu masyarakat memahami pelanggaran lalu lintas dan sanksinya berdasarkan UU No. 22 Tahun 2009.
             </p>
-            <div className="bg-blue-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
-              <span style={{ fontSize: 14 }}>📁</span> Pilih Gambar
-            </div>
-            <p className="text-xs text-gray-400 mt-3">JPG · PNG · WEBP — Maks 4MB</p>
           </div>
-        ) : (
-          /* ── Preview Gambar ── */
-          <div className="bg-white card-surface border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-            {/* Gambar preview */}
-            <div className="relative bg-gray-900">
-              <img
-                src={imagePreview}
-                alt="Preview"
-                className="w-full max-h-80 object-contain"
-              />
-              <button
-                onClick={reset}
-                className="absolute top-3 right-3 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full p-1.5 transition-all"
-              >
-                <X size={16} />
-              </button>
-            </div>
- 
-            {/* Info file + tombol analisis */}
-            <div className="p-4 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-semibold text-gray-800 truncate max-w-xs">
-                  {imageFile?.name}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {imageFile ? (imageFile.size / 1024 / 1024).toFixed(2) + " MB" : ""}
-                </p>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <button onClick={reset}
-                  className="text-xs text-gray-400 hover:text-red-500 px-3 py-2 rounded-xl hover:bg-red-50 transition-colors border border-gray-200">
-                  Ganti
-                </button>
-                <button
-                  onClick={detectImage}
-                  disabled={loading}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-all shadow-sm active:scale-95"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Menganalisis...
-                    </>
-                  ) : (
-                    <>
-                      <span style={{ fontSize: 14 }}>🔍</span> Analisis Sekarang
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
- 
-        {/* ── Loading State ── */}
-        {loading && (
-          <div className="mt-6 bg-white card-surface border border-gray-100 rounded-2xl p-6 text-center shadow-sm">
-            <div className="flex items-center justify-center gap-3 mb-3">
-              <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm font-semibold text-gray-700">AI Vision sedang memeriksa gambar...</span>
-            </div>
-            <p className="text-xs text-gray-400 mb-4">Proses 10–30 detik</p>
-            <div className="flex flex-col gap-2 text-left max-w-sm mx-auto">
-              {[
-                { step: "1", label: "BLIP",         desc: "Buat deskripsi awal gambar (lokal)" },
-                { step: "2", label: "Groq Vision",  desc: "Llama-4-Scout benar-benar melihat & menganalisis gambar" },
-                { step: "3", label: "Groq Legal",   desc: "Petakan temuan ke pasal UU No. 22 Tahun 2009" },
-              ].map((s) => (
-                <div key={s.step} className="flex items-center gap-2.5 text-xs">
-                  <span className="bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center font-bold shrink-0">{s.step}</span>
-                  <span className="font-semibold text-gray-700 w-24 shrink-0">{s.label}</span>
-                  <span className="text-gray-400">{s.desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
- 
-        {/* ── Error State ── */}
-        {error && (
-          <div className="mt-6 bg-red-50 border border-red-200 rounded-2xl p-4 flex items-start gap-3">
-            <AlertTriangle size={18} className="text-red-500 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-semibold text-red-800 mb-1">Gagal menganalisis gambar</p>
-              <p className="text-xs text-red-600 leading-relaxed">{error}</p>
-            </div>
-          </div>
-        )}
- 
-        {/* ── HASIL DETEKSI ── */}
-        {result && !loading && (
-          <div className="mt-6 space-y-4">
 
-            {/* Jenis kendaraan & deskripsi scene dari Vision AI */}
-            {result.pipeline?.vehicle_type && (
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
-                <div className="flex items-center gap-3">
-                  <span style={{ fontSize: 24 }}>
-                    {result.pipeline.vehicle_type === "motorcycle" ? "🏍️" :
-                     result.pipeline.vehicle_type === "car"        ? "🚗" :
-                     result.pipeline.vehicle_type === "truck"      ? "🚛" :
-                     result.pipeline.vehicle_type === "bus"        ? "🚌" : "🚘"}
-                  </span>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Jenis Kendaraan</p>
-                    <p className="text-sm font-bold text-slate-800 capitalize">{result.pipeline.vehicle_type}
-                      {result.pipeline.total_people > 0 && (
-                        <span className="ml-2 text-xs font-normal text-slate-500">· {result.pipeline.total_people} orang terdeteksi</span>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                {result.pipeline.scene_description && (
-                  <p className="text-xs text-slate-500 italic leading-relaxed border-t border-slate-200 pt-2">
-                    🔍 <strong>Situasi:</strong> {result.pipeline.scene_description}
-                  </p>
-                )}
-                {result.pipeline.not_visible?.length > 0 && (
-                  <div className="border-t border-slate-200 pt-2">
-                    <p className="text-xs text-slate-400 font-semibold mb-1">❓ Tidak dapat dinilai (tidak terlihat jelas):</p>
-                    <div className="flex flex-wrap gap-1">
-                      {result.pipeline.not_visible.map((item, i) => (
-                        <span key={i} className="text-xs px-2 py-0.5 bg-slate-200 text-slate-500 rounded-full">{item}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+          <div>
+            <h4 className="font-bold text-lg text-info-heading mb-4">Teknologi</h4>
+            <ul className="space-y-2 font-normal text-sm text-on-surface-variant">
+              <li className="flex items-center gap-2"><span className="text-info-heading"><Zap size={14} /></span> Groq API + Llama 3.3-70B</li>
+              <li className="flex items-center gap-2"><span className="text-info-heading"><Search size={14} /></span> RAG & ChromaDB</li>
+              <li className="flex items-center gap-2"><span className="text-info-heading"><BookOpen size={14} /></span> UU No. 22 Tahun 2009</li>
+              <li className="flex items-center gap-2"><span className="text-info-heading"><Shield size={14} /></span> React + Tailwind v4</li>
+            </ul>
+          </div>
 
-            {/* Deskripsi gambar dari AI (fallback jika tidak ada pipeline) */}
-            {result.image_description && !result.pipeline?.vehicle_type && (
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3">
-                <span style={{ fontSize: 20 }}>🖼️</span>
-                <div>
-                  <p className="text-xs font-semibold text-blue-700 mb-1 uppercase tracking-wide">
-                    AI mendeteksi gambar berisi:
-                  </p>
-                  <p className="text-sm text-blue-800 leading-relaxed">{result.image_description}</p>
-                </div>
-              </div>
-            )}
- 
-            {/* Ringkasan deteksi */}
-            <div className={`rounded-2xl p-4 flex items-center gap-3 border ${
-              result.is_violation
-                ? "bg-amber-50 border-amber-200"
-                : "bg-emerald-50 border-emerald-200"
-            }`}>
-              <span style={{ fontSize: 28 }}>
-                {result.is_violation ? "⚠️" : "✅"}
-              </span>
-              <div>
-                <p className="text-sm font-bold text-gray-800">
-                  {result.is_violation
-                    ? `${result.violations?.length ?? 0} Pelanggaran Terdeteksi`
-                    : "Tidak Ada Pelanggaran Terdeteksi"
-                  }
-                </p>
-                <p className="text-xs text-gray-600 mt-0.5">{result.message}</p>
-              </div>
-            </div>
- 
-            {/* Kartu pelanggaran */}
-            {result.violations?.map((v, i) => {
-              const s = SEV[v.severity] ?? SEV.medium;
-              const matchedPasal = PASAL_LIST.find(p =>
-                v.pasal?.includes(p.pasal.replace(" (1)", "").replace(" (2)", "").replace(" (5)", ""))
-              );
-              return (
-                <div
-                  key={i}
-                  className="rounded-2xl p-4 border"
-                  style={{ background: s.bg, borderColor: s.border, animation: `slideUp 0.35s ease-out ${i * 0.1}s both` }}
-                >
-                  <div className="flex items-start gap-3 mb-3">
-                    <div className="w-9 h-9 rounded-xl bg-white shadow-sm flex items-center justify-center text-lg shrink-0">
-                      🚫
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
-                        <span className="text-xs font-bold text-white bg-blue-600 px-2 py-0.5 rounded-md">
-                          #{i + 1}
-                        </span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-md"
-                          style={{ background: s.pillBg, color: s.pillText }}>
-                          {s.label}
-                        </span>
-                        {v.confidence && <ConfidenceBadge level={v.confidence} />}
-                      </div>
-                      <p className="font-bold text-gray-800 text-sm">{v.jenis}</p>
-                    </div>
-                  </div>
- 
-                  <div className="space-y-2 pl-1">
-                    <div className="flex gap-2 text-xs items-start">
-                      <span className="text-gray-400 font-medium w-20 shrink-0">Pasal</span>
-                      <button
-                        onClick={() => matchedPasal && setModalPasal(matchedPasal)}
-                        className={`text-blue-700 font-semibold text-left ${matchedPasal ? "hover:underline cursor-pointer" : ""} flex items-center gap-1`}
-                      >
-                        {v.pasal}
-                        {matchedPasal && <ExternalLink size={10} className="text-blue-400" />}
-                      </button>
-                    </div>
-                    <div className="flex gap-2 text-xs">
-                      <span className="text-gray-400 font-medium w-20 shrink-0">Sanksi</span>
-                      <span className="text-gray-800">{v.sanksi}</span>
-                    </div>
-                    <div className="flex gap-2 text-xs">
-                      <span className="text-gray-400 font-medium w-20 shrink-0">Terlihat</span>
-                      <span className="text-gray-500 leading-relaxed">{v.penjelasan}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
- 
-            {/* Total Denda */}
-            {result.violations?.length > 0 && (() => {
-              const total = result.violations.reduce((s, v) => s + parseMaxDenda(v.sanksi), 0);
-              return total > 0 ? (
-                <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-2xl p-4">
-                  <div>
-                    <p className="text-xs font-bold text-amber-800">💰 Total Estimasi Denda Maks.</p>
-                    <p className="text-xs text-amber-600 mt-0.5">
-                      Akumulasi {result.violations.length} pelanggaran
-                    </p>
-                  </div>
-                  <span className="text-xl font-extrabold text-amber-700">{formatRupiah(total)}</span>
-                </div>
-              ) : null;
-            })()}
- 
-            {/* Action buttons */}
-            {result.violations?.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                <button
-                  onClick={() => {
-                    const lines = result.violations.map((v, i) =>
-                      `${i + 1}. *${v.jenis}*\n   📋 ${v.pasal}\n   ⚠️ ${v.sanksi}`
-                    );
-                    const total = result.violations.reduce((s, v) => s + parseMaxDenda(v.sanksi), 0);
-                    const text  = `*Hasil Deteksi Gambar TrafficAI* 📷\n\n_${result.image_description}_\n\n${lines.join("\n\n")}\n\n💰 *Total Denda Maks: ${formatRupiah(total)}*\n\n_Hasil bersifat edukatif berdasarkan UU No. 22 Tahun 2009_`;
-                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-                  }}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-semibold transition-all border border-emerald-100"
-                >
-                  <Share2 size={12} /> Share WA
-                </button>
-                <button
-                  onClick={reset}
-                  className="flex items-center gap-1.5 text-xs px-3 py-2 bg-gray-50 hover:bg-gray-100 text-gray-600 rounded-xl font-semibold transition-all border border-gray-200"
-                >
-                  <RefreshCw size={12} /> Analisis Gambar Lain
-                </button>
-              </div>
-            )}
- 
-            {/* Disclaimer */}
-            <div className="bg-gray-50 border border-gray-100 rounded-xl p-3">
-              <p className="text-xs text-gray-400 leading-relaxed">
-                ⚠️ Hasil deteksi gambar bersifat <strong>edukatif</strong> dan bergantung pada
-                kualitas serta sudut pengambilan foto. Sistem hanya mendeteksi pelanggaran yang
-                <strong> terlihat jelas</strong> di gambar. Tidak menggantikan keputusan pihak berwenang.
+          <div>
+            <h4 className="font-bold text-lg text-info-heading mb-4">Disclaimer</h4>
+            <div className="bg-error-container text-on-error-container p-3 rounded-lg flex items-start gap-2">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+              <p className="font-normal text-[12px] leading-relaxed">
+                Hasil analisis bersifat edukatif. Informasi ini tidak menggantikan keputusan resmi pihak berwenang (Kepolisian/Pengadilan).
               </p>
             </div>
           </div>
-        )}
- 
-        {/* ── Contoh kasus yang bisa dideteksi ── */}
-        {!result && !loading && (
-          <div className="mt-8">
-            <h2 className="text-sm font-bold text-gray-700 mb-4 uppercase tracking-wide">
-              Pelanggaran yang dapat dideteksi dari gambar
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {[
-                { icon: "🪖", name: "Tanpa Helm",      acc: "~88%" },
-                { icon: "👥", name: "Bonceng 3",        acc: "~85%" },
-                { icon: "🔒", name: "Tanpa Sabuk",      acc: "~80%" },
-                { icon: "📱", name: "Main HP",          acc: "~72%" },
-                { icon: "🔢", name: "Tanpa Plat",       acc: "~78%" },
-                { icon: "🔭", name: "Tanpa Spion",      acc: "~60%" },
-              ].map((d, i) => (
-                <div key={i} className="bg-white card-surface border border-gray-200 rounded-xl p-3 text-center">
-                  <div style={{ fontSize: 24 }} className="mb-2">{d.icon}</div>
-                  <p className="text-xs font-semibold text-gray-700">{d.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Est. akurasi {d.acc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        </div>
+        <div className="border-t border-outline-variant mt-8 pt-6 flex flex-col md:flex-row items-center justify-between font-normal text-xs text-outline">
+          <p>&copy; {new Date().getFullYear()} TrafficAI. All rights reserved.</p>
+          <p>Didesain untuk Profesionalisme & Edukasi</p>
+        </div>
       </div>
-    </div>
+    </footer>
   );
 }
+
+
 
 // ════════════════════════════════════════════════
 // MAIN APP
 // ════════════════════════════════════════════════
 export default function App() {
-  const [dark, toggleDark]             = useDarkMode();
-  const [page, setPage]                = useState("home");
-  const [initPrompt, setInitPrompt]    = useState("");
+  const [dark, toggleDark] = useDarkMode();
+  const [page, setPage] = useState("home");
+  const [initPrompt, setInitPrompt] = useState("");
   const [history, setHistory, clearHistory] = usePersistentHistory();
-  const [mobileOpen, setMobileOpen]    = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const NAV = [
-    { id: "home",       label: "Home",      icon: Home },
-    { id: "konsultasi", label: "Konsultasi",icon: MessageSquare },
-    { id: "informasi",  label: "Informasi", icon: BookOpen },
-    { id: "riwayat",    label: "Riwayat",   icon: History },
-    { id: "evaluasi",   label: "Evaluasi",  icon: BarChart2 },
-    { id: "tentang",    label: "Tentang",   icon: Info },
-    { id: "gambar", label: "Deteksi Foto", icon: Camera },
+    { id: "home", label: "Home", icon: Home },
+    { id: "konsultasi", label: "Consult", icon: MessageSquare },
+    { id: "informasi", label: "Laws", icon: BookOpen },
+    { id: "riwayat", label: "History", icon: History },
   ];
 
   const goTo = useCallback((p, prompt = "") => {
@@ -1587,79 +1467,87 @@ export default function App() {
       <style>{`
         @keyframes typingBounce { 0%,60%,100%{transform:translateY(0)} 30%{transform:translateY(-5px)} }
         @keyframes slideUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-        ${dark ? DARK_CSS : ""}
+        ${DARK_CSS}
       `}</style>
 
-      <div className={`h-screen flex flex-col bg-gray-50 page-bg ${dark ? "tm-dark" : ""}`}>
+      <div className={`h-screen flex flex-col bg-background text-on-surface page-bg ${dark ? "tm-dark" : ""}`}>
         {/* Navbar */}
-        <nav className="bg-white border-b border-gray-200 shrink-0 z-50 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-            <button onClick={() => goTo("home")} className="flex items-center gap-2">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl p-1.5 shadow-sm">
+        <nav className="bg-surface border-b border-outline-variant shrink-0 z-50 shadow-sm transition-colors">
+          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <button onClick={() => goTo("home")} onDoubleClick={() => goTo("evaluasi")} className="flex items-center gap-2 group">
+              <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-xl p-2 shadow-md group-hover:shadow-blue-300/40 transition-shadow">
                 <Car size={15} className="text-white" />
               </div>
-              <span className="font-bold text-gray-800 text-sm">TrafficAI</span>
-              <span className="hidden sm:inline text-xs text-gray-400">· Konsultasi Lalu Lintas</span>
+              <span className="font-extrabold text-info-heading text-lg tracking-tight">Traffic<span className="text-blue-600">AI</span></span>
             </button>
 
-            <div className="hidden sm:flex items-center gap-1">
+            <div className="hidden sm:flex items-center gap-0.5">
               {NAV.map(({ id, label, icon: Icon }) => (
                 <button key={id} onClick={() => goTo(id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
-                    page === id ? "bg-blue-50 text-blue-600" : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-                  }`}>
-                  <Icon size={14} />
+                  className={`relative flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${page === id
+                    ? "bg-blue-600 text-white shadow-md shadow-blue-500/25"
+                    : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+                    }`}>
+                  <Icon size={13} />
                   {label}
                   {id === "riwayat" && history.length > 0 && (
-                    <span className="bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center leading-none">
+                    <span className={`text-[10px] rounded-full w-4 h-4 flex items-center justify-center leading-none font-bold ${page === id ? "bg-white text-blue-600" : "bg-blue-600 text-white"}`}>
                       {history.length > 9 ? "9+" : history.length}
                     </span>
                   )}
                 </button>
               ))}
-              {/* Dark mode toggle */}
+              <div className="w-px h-5 bg-gray-200 mx-1" />
               <button onClick={toggleDark}
-                className="ml-1 p-2 rounded-xl text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-all"
+                className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-all"
                 title={dark ? "Mode terang" : "Mode gelap"}>
                 {dark ? <Sun size={15} /> : <Moon size={15} />}
               </button>
             </div>
 
-            <button className="sm:hidden p-2 text-gray-600" onClick={() => setMobileOpen(o => !o)}>
+            <button className="sm:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-xl transition-colors" onClick={() => setMobileOpen(o => !o)}>
               {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
 
           {mobileOpen && (
-            <div className="sm:hidden bg-white border-t border-gray-100 px-4 py-3">
+            <div className="sm:hidden bg-surface border-t border-outline-variant px-4 py-3 space-y-1 transition-colors">
               {NAV.map(({ id, label, icon: Icon }) => (
                 <button key={id} onClick={() => goTo(id)}
-                  className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium mb-1 transition-all ${
-                    page === id ? "bg-blue-50 text-blue-600" : "text-gray-600 hover:bg-gray-100"
-                  }`}>
+                  className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-semibold transition-all ${page === id
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-gray-600 hover:bg-gray-100"
+                    }`}>
                   <Icon size={16} /> {label}
+                  {id === "riwayat" && history.length > 0 && (
+                    <span className={`ml-auto text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-bold ${page === id ? "bg-white text-blue-600" : "bg-blue-600 text-white"}`}>
+                      {history.length > 9 ? "9+" : history.length}
+                    </span>
+                  )}
                 </button>
               ))}
-              <button onClick={toggleDark}
-                className="flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100">
-                {dark ? <Sun size={16} /> : <Moon size={16} />}
-                {dark ? "Mode Terang" : "Mode Gelap"}
-              </button>
+              <div className="border-t border-gray-100 pt-2">
+                <button onClick={toggleDark}
+                  className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-all">
+                  {dark ? <Sun size={16} /> : <Moon size={16} />}
+                  {dark ? "Mode Terang" : "Mode Gelap"}
+                </button>
+              </div>
             </div>
           )}
         </nav>
 
         {/* Page content */}
         <div className="flex-1 overflow-hidden">
-          {page === "home"       && <HomePage goTo={goTo} />}
-          {page === "konsultasi" && (
-            <KonsultasiPage key={initPrompt} initMsg={initPrompt} setHistory={setHistory} />
-          )}
-          {page === "informasi"  && <InformasiPage />}
-          {page === "riwayat"    && <RiwayatPage history={history} goToChat={goToChat} onClear={clearHistory} />}
-          {page === "evaluasi"   && <EvaluasiPage />}
-          {page === "tentang"    && <TentangPage />}
-          {page === "gambar" && <DeteksiGambarPage />}
+          <AnimatePresence mode="wait">
+            {page === "home" && <HomePage key="home" goTo={goTo} />}
+            {page === "konsultasi" && (
+              <KonsultasiPage key={initPrompt || "chat"} initMsg={initPrompt} setHistory={setHistory} />
+            )}
+            {page === "informasi" && <InformasiPage key="info" />}
+            {page === "riwayat" && <RiwayatPage key="riwayat" history={history} goToChat={goToChat} onClear={clearHistory} />}
+            {page === "evaluasi" && <EvaluasiPage key="eval" />}
+          </AnimatePresence>
         </div>
       </div>
     </ThemeCtx.Provider>

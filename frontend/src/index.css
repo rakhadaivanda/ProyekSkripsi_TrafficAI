@@ -1,1 +1,221 @@
 @import "tailwindcss";
+
+@theme {
+  --spacing-base: 8px;
+  --spacing-xl: 80px;
+  --spacing-sm: 12px;
+  --spacing-container-max: 1280px;
+  --spacing-xs: 4px;
+  --spacing-md: 24px;
+  --spacing-margin-mobile: 16px;
+  --spacing-lg: 48px;
+  --spacing-gutter: 24px;
+
+  --font-label-md: "Inter", sans-serif;
+  --font-headline-lg-mobile: "Plus Jakarta Sans", sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-headline-md: "Plus Jakarta Sans", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-headline-sm: "Plus Jakarta Sans", sans-serif;
+  --font-headline-lg: "Plus Jakarta Sans", sans-serif;
+  --font-body-sm: "Inter", sans-serif;
+  --font-headline-xl: "Plus Jakarta Sans", sans-serif;
+
+  /* LIGHT MODE VARIABLES (Refined Professional) */
+  --color-background: #f8fafc;
+  --color-surface: #f8fafc;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f5f9;
+  
+  --color-primary: #1e3a8a;
+  --color-primary-fixed: #1e3a8a;
+  --color-primary-fixed-dim: #1e40af;
+  
+  --color-secondary: #2563eb;
+  --color-secondary-fixed: #dbeafe;
+  --color-on-secondary-fixed: #1e3a8a;
+  --color-secondary-fixed-dim: #93c5fd;
+  
+  --color-tertiary-fixed: #e0e7ff;
+  --color-on-tertiary-fixed: #3730a3;
+  
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #475569;
+  
+  --color-outline: #94a3b8;
+  --color-outline-variant: #e2e8f0;
+  
+  --color-error: #ef4444;
+  --color-error-container: #fee2e2;
+  --color-on-error-container: #991b1b;
+  --color-on-error: #ffffff;
+}
+
+.tm-dark {
+  --color-background: #0b1120;
+  --color-surface: #0b1120;
+  --color-surface-container-lowest: #131c31;
+  --color-surface-container-low: #1b2744;
+  
+  --color-primary: #fbbf24;
+  --color-primary-fixed: #fbbf24;
+  --color-primary-fixed-dim: #f59e0b;
+  
+  --color-secondary: #fcd34d;
+  --color-secondary-fixed: #1c1708;
+  --color-on-secondary-fixed: #fde68a;
+  --color-secondary-fixed-dim: #78350f;
+  
+  --color-tertiary-fixed: #1e3a8a;
+  --color-on-tertiary-fixed: #bfdbfe;
+  
+  --color-on-surface: #f1f5f9;
+  --color-on-surface-variant: #94a3b8;
+  
+  --color-outline: #475569;
+  --color-outline-variant: #1e293b;
+  
+  --color-error: #f87171;
+  --color-error-container: #7f1d1d;
+  --color-on-error-container: #fca5a5;
+  --color-on-error: #000000;
+}
+
+/* ═══════════════════════════════════════
+   CUSTOM COMPONENTS & UTILITIES
+   ═══════════════════════════════════════ */
+.text-gradient-hero {
+  background: linear-gradient(to right, #111827, #1e40af);
+  -webkit-background-clip: text;
+  color: transparent;
+}
+.tm-dark .text-gradient-hero {
+  background: none;
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.badge-hero {
+  background-color: #eff6ff;
+  border-color: #dbeafe;
+  color: #2563eb;
+}
+.tm-dark .badge-hero {
+  background-color: rgba(30, 58, 138, 0.3);
+  border-color: rgba(30, 64, 175, 0.5);
+  color: #60a5fa;
+}
+
+.text-info-heading {
+  color: var(--color-primary-fixed);
+}
+.tm-dark .text-info-heading {
+  color: #ffffff;
+}
+
+.blur-hero {
+  background-color: rgba(96, 165, 250, 0.2); /* blue-400/20 */
+}
+.tm-dark .blur-hero {
+  background-color: rgba(37, 99, 235, 0.2); /* blue-600/20 */
+}
+
+.text-desc-hero {
+  color: #000000;
+}
+.tm-dark .text-desc-hero {
+  color: #d1d5db; /* gray-300 */
+}
+
+/* ═══════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════ */
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-background);
+  font-family: var(--font-body-md);
+  color: var(--color-on-surface);
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4, h5, h6, .font-extrabold, .font-bold {
+  font-family: var(--font-headline-xl);
+}
+
+/* ═══════════════════════════════════════
+   GLASS CARD WITH DEPTH
+   ═══════════════════════════════════════ */
+.glass-card {
+  background: var(--color-surface-container-lowest);
+  border: 1px solid var(--color-outline-variant);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.03),
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    0 12px 40px rgba(0, 0, 0, 0.02);
+  transition: box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+              transform 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s ease;
+}
+
+.glass-card:hover {
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.04),
+    0 8px 24px rgba(0, 0, 0, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.04);
+}
+
+.tm-dark .glass-card {
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    0 4px 16px rgba(0, 0, 0, 0.3),
+    0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.tm-dark .glass-card:hover {
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 24px 60px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ═══════════════════════════════════════
+   SCROLLBAR STYLING
+   ═══════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline);
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-on-surface-variant);
+}
+
+.tm-dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+/* ═══════════════════════════════════════
+   SELECTION HIGHLIGHT
+   ═══════════════════════════════════════ */
+::selection {
+  background: rgba(37, 99, 235, 0.2);
+  color: inherit;
+}
+
+.tm-dark ::selection {
+  background: rgba(251, 191, 36, 0.25);
+}

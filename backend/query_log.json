@@ -1,0 +1,18 @@
+[
+  {
+    "query": "haloo",
+    "mode": "text",
+    "violations_count": 0,
+    "is_violation": false,
+    "avg_confidence": 0.0578,
+    "timestamp": "2026-06-20T15:13:58.554234"
+  },
+  {
+    "query": "kamu bisa apa aja?",
+    "mode": "text",
+    "violations_count": 0,
+    "is_violation": false,
+    "avg_confidence": 0.1723,
+    "timestamp": "2026-06-20T15:14:07.302749"
+  }
+]

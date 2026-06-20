@@ -30,4 +30,4 @@ RUN mkdir -p /tmp/transformers_cache /tmp/hf_home && \
 EXPOSE 7860
 
 # Run the application with gunicorn for production
-CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "120", "--workers", "1", "--threads", "2", "app:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--timeout", "600", "--workers", "1", "--threads", "2", "app:app"]

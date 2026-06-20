@@ -15,24 +15,58 @@ app = Flask(__name__)
 CORS(app)
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-DB_FOLDER    = "./chroma_db"
-DEVICE       = "cuda" if torch.cuda.is_available() else "cpu"
-feedback_log = []
-query_log    = []
+GROQ_API_KEY   = os.environ.get("GROQ_API_KEY", "")
+DB_FOLDER      = "./chroma_db"
+DEVICE         = "cuda" if torch.cuda.is_available() else "cpu"
+FEEDBACK_FILE  = "./feedback_log.json"
+QUERY_FILE     = "./query_log.json"
+
+
+def _load_json_log(path: str) -> list:
+    """Load a JSON log file, returning an empty list on any error."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return data if isinstance(data, list) else []
+    except (FileNotFoundError, json.JSONDecodeError):
+        return []
+
+
+def _save_json_log(path: str, data: list) -> None:
+    """Persist a log list to disk atomically (write-then-rename)."""
+    tmp = path + ".tmp"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, path)
+    except Exception as e:
+        print(f"[WARN] Gagal menyimpan log ke {path}: {e}")
+
+
+feedback_log: list = _load_json_log(FEEDBACK_FILE)
+query_log: list    = _load_json_log(QUERY_FILE)
 
 print("🔧 Memuat resources...")
-embeddings   = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
-vector_store = Chroma(persist_directory=DB_FOLDER, embedding_function=embeddings,
-                      collection_metadata={"hnsw:space": "cosine"})
-llm          = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
-groq_client  = Groq(api_key=GROQ_API_KEY)
+try:
+    embeddings   = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-multilingual-mpnet-base-v2")
+    vector_store = Chroma(persist_directory=DB_FOLDER, embedding_function=embeddings,
+                          collection_metadata={"hnsw:space": "cosine"})
+    llm          = ChatGroq(temperature=0, model_name="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
+    groq_client  = Groq(api_key=GROQ_API_KEY)
+    print("✅ LLM & vector store siap.")
+except Exception as e:
+    print(f"❌ Gagal memuat resources utama: {e}")
+    raise SystemExit(1) from e
 
 print("🔭 Memuat BLIP (caption only)...")
-blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
-blip_model     = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(DEVICE)
-print(f"✅ Resources siap! Device: {DEVICE}")
-print("ℹ️  Deteksi gambar: BLIP caption + Groq Vision (Llama-4-Scout) — CLIP dihapus")
+try:
+    blip_processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+    blip_model     = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base").to(DEVICE)
+    print(f"✅ BLIP siap. Device: {DEVICE}")
+except Exception as e:
+    print(f"⚠️  BLIP gagal dimuat ({e}). Caption lokal tidak tersedia.")
+    blip_processor = None
+    blip_model     = None
 
 SYSTEM_PROMPT = """Anda adalah TrafficAI, asisten AI cerdas untuk edukasi lalu lintas Indonesia.
 
@@ -219,24 +253,59 @@ def get_context_with_scores(query):
         docs = retriever.invoke(query)
         return "\n\n".join([d.page_content for d in docs]), []
 
-def clean_json(text):
+def clean_json(text: str) -> str:
+    """Extract the first complete JSON object from an LLM response.
+
+    Uses brace-counting instead of a greedy regex so nested objects
+    (e.g. violations[] with sub-keys) are extracted correctly.
+    Falls back to the raw stripped text if no { ... } pair is found.
+    """
     text = text.strip()
-    # If the LLM wraps in markdown code blocks, extract just the block
-    match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
-    if match:
-        text = match.group(1)
-    else:
-        # Fallback: extract from the first { to the last }
-        start = text.find('{')
-        end = text.rfind('}')
-        if start != -1 and end != -1:
-            text = text[start:end+1]
-    return text.strip()
+
+    # Strip markdown code fences if present
+    fence_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text)
+    if fence_match:
+        text = fence_match.group(1).strip()
+
+    # Find the first top-level JSON object via brace counting
+    start = text.find('{')
+    if start == -1:
+        return text  # No object found; let caller raise JSONDecodeError
+
+    depth = 0
+    in_string = False
+    escape_next = False
+    for i, ch in enumerate(text[start:], start=start):
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == '\\' and in_string:
+            escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == '{':
+            depth += 1
+        elif ch == '}':
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+
+    # Unbalanced braces — return best effort
+    end = text.rfind('}')
+    if end != -1 and end >= start:
+        return text[start:end + 1]
+    return text
 
 def decode_image(b64):
     return Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGB")
 
 def run_blip_caption(image):
+    if blip_processor is None or blip_model is None:
+        return "(BLIP tidak tersedia)"
     try:
         inputs = blip_processor(image, return_tensors="pt").to(DEVICE)
         with torch.no_grad():
@@ -293,6 +362,13 @@ def too_large(e):
 def chat():
     data       = request.get_json()
     user_input = (data or {}).get("message", "").strip()
+
+    # Tangkap kasus user salah kirim gambar ke endpoint chat
+    if not user_input and (data or {}).get("image_base64"):
+        return jsonify({
+            "error": "Endpoint ini hanya menerima teks. Untuk analisis gambar, gunakan POST /api/detect-image."
+        }), 400
+
     if not user_input:
         return jsonify({"error": "Input tidak boleh kosong"}), 400
     try:
@@ -310,12 +386,26 @@ def chat():
                           "is_violation": result.get("is_violation", False),
                           "avg_confidence": avg_conf,
                           "timestamp": datetime.datetime.now().isoformat()})
+        _save_json_log(QUERY_FILE, query_log)
         return jsonify(result)
     except json.JSONDecodeError as e:
         print(f"[ERROR] JSON Decode Error: {e}")
         print(f"[ERROR] RAW RESPONSE: {response}")
-        return jsonify({"error": f"Gagal parse JSON: {e}"}), 500
+        return jsonify({
+            "mode": "info",
+            "is_violation": False,
+            "message": "Maaf, AI saya mengalami sedikit kebingungan saat merangkai jawaban. Boleh coba tanyakan lagi dengan kalimat yang sedikit berbeda?",
+            "violations": []
+        }), 200
     except Exception as e:
+        err_str = str(e).lower()
+        if "429" in err_str or "rate limit" in err_str or "too many requests" in err_str:
+            return jsonify({
+                "mode": "info",
+                "is_violation": False,
+                "message": "Aduh, maaf ya! Sistem saya sedang kelebihan beban karena terlalu banyak permintaan (Rate Limit API). Mohon tunggu sekitar 1 menit sebelum mencoba lagi.",
+                "violations": []
+            }), 200
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
@@ -331,6 +421,14 @@ def detect_image():
         return jsonify({"error": "image_base64 tidak boleh kosong"}), 400
     if len(image_b64) > 8_000_000:
         return jsonify({"error": "Gambar terlalu besar (maks ~6MB)."}), 413
+
+    # Validate that the string is legal base64 before passing it downstream
+    try:
+        _decoded_check = base64.b64decode(image_b64, validate=True)
+        if len(_decoded_check) < 8:
+            raise ValueError("Data terlalu kecil untuk menjadi gambar valid")
+    except Exception:
+        return jsonify({"error": "image_base64 bukan data base64 yang valid"}), 400
 
     # Step 1: BLIP caption (lokal)
     blip_caption = "(tidak tersedia)"
@@ -371,6 +469,7 @@ def detect_image():
                           "is_violation": result.get("is_violation", False),
                           "avg_confidence": 0,
                           "timestamp": datetime.datetime.now().isoformat()})
+        _save_json_log(QUERY_FILE, query_log)
         return jsonify(result)
     except json.JSONDecodeError as e:
         return jsonify({"error": f"Legal AI tidak menghasilkan JSON valid: {e}", "step": "legal"}), 500
@@ -386,6 +485,7 @@ def feedback():
     data = request.get_json() or {}
     feedback_log.append({"message_id": data.get("messageId"), "feedback": data.get("feedback"),
                           "query": data.get("query", ""), "timestamp": datetime.datetime.now().isoformat()})
+    _save_json_log(FEEDBACK_FILE, feedback_log)
     return jsonify({"status": "ok"})
 
 
