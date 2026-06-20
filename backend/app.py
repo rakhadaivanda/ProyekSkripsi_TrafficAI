@@ -215,14 +215,13 @@ def clamp_score(score):
 
 def distance_to_similarity(distance):
     """
-    Mengubah cosine distance ChromaDB menjadi similarity score 0-1.
-    Cosine distance = 1 - cosine_similarity, range [0, 2].
-    Semakin kecil distance, semakin mirip dokumen.
+    Mengubah distance ChromaDB menjadi similarity score 0-1.
+    Menggunakan exponential decay agar lebih tahan terhadap nilai L2 distance yang besar.
     """
     try:
         d = abs(float(distance))
-        # Konversi cosine distance → cosine similarity
-        similarity = 1.0 - d
+        import math
+        similarity = math.exp(-d / 2.0)
         return round(max(0.0, min(1.0, similarity)), 4)
     except Exception:
         return 0.0
